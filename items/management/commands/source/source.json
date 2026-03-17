@@ -1,0 +1,75 @@
+[
+  {
+    "name": "AK-47 Redline",
+    "quality": "Field-Tested",
+    "game": "CS2",
+    "listings": [
+      {
+        "site": "steam",
+        "url": "https://steamcommunity.com/market/listings/730/AK-47%20Redline",
+        "price": 25.50,
+        "currency": "USD"
+      }
+    ]
+  },
+  {
+    "name": "AWP Asiimov",
+    "quality": "Battle-Scarred",
+    "game": "CS2",
+    "listings": [
+      {
+        "site": "buff",
+        "url": "https://buff.market/awp-asiimov",
+        "price": 120.00,
+        "currency": "USD"
+      }
+    ]
+  },
+  {
+    "name": "M4A4 Howl",
+    "quality": "Factory New",
+    "game": "CS2",
+    "listings": [
+      {
+        "site": "skinport",
+        "url": "https://skinport.com/m4a4-howl",
+        "price": 6500.00,
+        "currency": "USD"
+      }
+    ]
+  },
+  {
+    "name": "Desert Eagle Blaze",
+    "quality": "Factory New",
+    "game": "CS2",
+    "listings": [
+      {
+        "site": "steam",
+        "url": "https://steamcommunity.com/market/listings/730/Desert%20Eagle%20Blaze",
+        "price": 480.75,
+        "currency": "USD"
+      }
+    ]
+  },
+  {
+    "name": "Glock-18 Fade",
+    "quality": "Factory New",
+    "game": "CS2",
+    "listings": [
+      {
+        "site": "buff",
+        "url": "https://buff.market/glock-fade",
+        "price": 980.00,
+        "currency": "USD"
+      }
+    ]
+  },
+{
+  "name": "USP-S | Kill Confirmed",
+  "quality": "Minimal Wear",
+  "source_game": "CS:GO",
+  "site": "SkinBaron",
+  "url": "https://skinbaron.de/en/csgo/USP-S-Kill-Confirmed"
+}
+
+]

@@ -1,6 +1,11 @@
-name,quality,source_game
-AK-47 | Redline,Field-Tested,CS:GO
-AWP | Asiimov,Battle-Scarred,CS:GO
-M4A4 | Howl,Factory New,CS:GO
-Glock-18 | Water Elemental,Minimal Wear,CS:GO
-Desert Eagle | Blaze,Factory New,CS:GO
+name,quality,source_game,site,url
+AK-47 | Redline,Field-Tested,CS:GO,Steam,https://steamcommunity.com/market/listings/730/AK-47%20%7C%20Redline
+M4A4 | Howl,Factory New,CS:GO,CS.Money,https://cs.money/item/12345
+Desert Eagle | Blaze,Minimal Wear,CS:GO,BitSkins,https://bitskins.com/view_item?id=67890
+AWP | Dragon Lore,Factory New,CS:GO,Steam,https://steamcommunity.com/market/listings/730/AWP%20%7C%20Dragon%20Lore
+Glock-18 | Fade,Factory New,CS:GO,CS.Money,https://cs.money/item/54321
+AK-47 Redline,Field-Tested,CS:GO
+AWP  Asiimov,Battle-Scarred,CS:GO
+,Factory New,CS:GO
+Glock-18  Water Elemental,,CS:GO
+Desert Eagle  Blaze,Factory New,CS:GO 
