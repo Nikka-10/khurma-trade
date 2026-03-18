@@ -1,3 +1,5 @@
 from django.shortcuts import render
 
-# Create your views here.
+
+def auth_page(request):
+    return render(request, "users/index.html")
