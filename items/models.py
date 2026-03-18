@@ -23,7 +23,7 @@ class ItemListing(models.Model):
     currency = models.CharField(max_length=3, default='USD')
     last_checked_at = models.DateTimeField(null=True, blank=True)
     price_changed_at = models.DateTimeField(null=True, blank=True)
-    url = models.URLField(max_length=500, null=True)
+    url = models.URLField(max_length=500)
     
     class Meta:
         indexes = [

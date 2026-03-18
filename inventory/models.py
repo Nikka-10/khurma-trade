@@ -8,7 +8,7 @@ class inventory(models.Model):
     item_listing = models.ForeignKey(ItemListing, on_delete=models.CASCADE)
     
     STATUS_CHOICES = [
-        ('owned', ('Owned / Holding')),
+        ('owned', ('Owned')),
         ('listed',('Listed for Sale')), 
         ('sold',  ('Sold'))
     ] 
