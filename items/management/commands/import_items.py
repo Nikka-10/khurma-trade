@@ -168,6 +168,6 @@ class Command(BaseCommand):
     def normalize_name(name):
         normalized_name = " ".join(name.split())
         return normalized_name
-                    
+         
             
     
