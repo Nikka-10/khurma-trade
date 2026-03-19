@@ -2,7 +2,7 @@ from django.db import models
 from items.models import ItemListing
 from users.models import User
 
-class deals(models.Model):
+class notebook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     item_listing = models.ForeignKey(ItemListing, on_delete=models.CASCADE)
     purchase_date = models.DateField()

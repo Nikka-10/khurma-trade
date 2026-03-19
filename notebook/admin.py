@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import deals
+from .models import notebook
 
 
-@admin.register(deals)
-class DealsAdmin(admin.ModelAdmin):
+@admin.register(notebook)
+class NotebookAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'item_listing', 'purchase_date', 'purchase_price', 'purchase_site', 'sell_date', 'sell_price', 'sell_site', 'fee', 'profit', 'deal_complete', 'time_stamp')
     list_filter = ('deal_complete', 'user', 'purchase_site', 'sell_site')
     search_fields = ('user__name', 'item_listing__item__name')

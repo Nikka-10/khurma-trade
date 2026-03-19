@@ -10,7 +10,7 @@ class Items(models.Model):
         indexes = [
             models.Index(fields=['name']),
             models.Index(fields=['source_game']),
-        ]
+        ]   
     
     def __str__(self):
         return self.name

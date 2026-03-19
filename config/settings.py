@@ -40,11 +40,8 @@ INSTALLED_APPS = [
     
     'main',
     'users',
-    'deals',
+    'notebook',
     'items',
-    'price_history',
-    'inventory'
-    
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
