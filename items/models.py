@@ -3,7 +3,6 @@ from decimal import Decimal
 
 class Game(models.TextChoices):
     CS2 = "CS2", "counter strike 2"
-    CSGO = "CSGO", "CS:GO (Legacy)"
     RUST = "RUST", "Rust"
     
 class Marketplace(models.Model):
@@ -33,6 +32,7 @@ class Item(models.Model):
     
     def __str__(self):
         return self.name_on_market
+    
     
 class ItemListing(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)

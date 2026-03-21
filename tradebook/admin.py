@@ -1,10 +1,11 @@
 from django.contrib import admin
 from .models import tradebook
 
-
 @admin.register(tradebook)
-class TradebookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'item_listing', 'purchase_date', 'purchase_price', 'purchase_site', 'sell_date', 'sell_price', 'sell_site', 'fee', 'profit', 'deal_complete', 'time_stamp')
-    list_filter = ('deal_complete', 'user', 'purchase_site', 'sell_site')
-    search_fields = ('user__name', 'item_listing__item__name')
-    ordering = ('-time_stamp',)
+class TradeAdmin(admin.ModelAdmin):
+    list_display = ['item', 'user', 'purchase_marketplace', 'purchase_date', 'purchase_price',
+                    'sell_marketplace', 'sell_price', 'profit', 'status','hold_till']
+    list_filter = ['status', 'purchase_date', 'item__source_game']  
+    search_fields = ['item__name_on_market', 'user__email', 'notes']
+    readonly_fields = ['profit', 'sell_fee_amount', 'buy_site', 'sell_marketplace']
+    

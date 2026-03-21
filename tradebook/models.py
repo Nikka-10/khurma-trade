@@ -3,18 +3,24 @@ from items.models import Item, Marketplace
 from users.models import User
 from decimal import Decimal
 
+
+class tags(models.Model):
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+
 class tradebook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    item= models.ForeignKey(Item, on_delete=models.CASCADE)
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
     
     purchase_date = models.DateField(null=True, blank=True)
     purchase_price = models.DecimalField(max_digits=12, decimal_places=2)
-    purchase_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True)
+    purchase_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="purchase_trades")
     purchase_marketplace_custom = models.CharField(max_length=255, null=True)
     
     sell_date = models.DateField(null=True, blank=True)
     sell_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True)
+    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="sell_trades")
     sell_marketplace_custom = models.CharField(max_length=255, null=True)
     
     status = models.CharField( max_length=20,
@@ -32,7 +38,7 @@ class tradebook(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['user', 'status']),
-            models.Index(fields=['user', 'item_listing']),
+            models.Index(fields=['user', 'item']),
         ]
     
     def __str__(self):
@@ -50,6 +56,13 @@ class tradebook(models.Model):
         if self.sell_price is None:
             return Decimal("0.00")
         return self.sell_price - self.purchase_price - self.sell_fee_amount
+    
+    @property  
+    def profit_percent(self) -> Decimal:
+        if self.sell_price is None:
+            return Decimal("0.00")
+        return (self.profit / self.purchase_price) * 100
+    
     
     @property
     def buy_site(self) -> str:
