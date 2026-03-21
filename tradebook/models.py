@@ -4,10 +4,15 @@ from users.models import User
 from decimal import Decimal
 
 
-class tags(models.Model):
+class Tag(models.Model):
     name = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     
+    class Meta:
+        unique_together = [['name', 'user']]
+    
+    def __str__(self):
+        return self.name
 
 class tradebook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -32,6 +37,7 @@ class tradebook(models.Model):
         default="inventory"
     )
     hold_till = models.DateField(null=True, blank=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name="trades")
     notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
