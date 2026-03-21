@@ -13,6 +13,7 @@ class Tag(models.Model):
     
     def __str__(self):
         return self.name
+    
 
 class tradebook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -68,7 +69,6 @@ class tradebook(models.Model):
         if self.sell_price is None:
             return Decimal("0.00")
         return (self.profit / self.purchase_price) * 100
-    
     
     @property
     def buy_site(self) -> str:
