@@ -2,6 +2,7 @@ from django.db import models
 from items.models import Item, Marketplace
 from users.models import User
 from decimal import Decimal
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class Tag(models.Model):
@@ -22,12 +23,24 @@ class TradeBook(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     
     purchase_date = models.DateField(null=True, blank=True)
-    purchase_price = models.DecimalField(max_digits=12, decimal_places=2)
+    purchase_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        validators=[
+            MinValueValidator(Decimal('0.01')), 
+            MaxValueValidator(Decimal('9999999999.99')),])
     purchase_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="purchase_trades")
     purchase_marketplace_custom = models.CharField(max_length=255, null=True)
     
     sell_date = models.DateField(null=True, blank=True)
-    sell_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sell_price = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        null=True, 
+        blank=True, 
+        validators=[
+            MinValueValidator(Decimal('0.01')), 
+            MaxValueValidator(Decimal('9999999999.99')),])
     sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="sell_trades")
     sell_marketplace_custom = models.CharField(max_length=255, null=True)
     
