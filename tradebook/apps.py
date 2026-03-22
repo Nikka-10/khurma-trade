@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class TradebookConfig(AppConfig):
+class TradeBookConfig(AppConfig):
     name = 'tradebook'

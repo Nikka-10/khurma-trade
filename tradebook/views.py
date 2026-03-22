@@ -1,3 +1,9 @@
 from django.shortcuts import render
+from items.models import Item, ItemListing, Marketplace
+from .models import TradeBook
+from users.models import User
 
-# Create your views here.
+
+def create_deal(request):
+    ...
+

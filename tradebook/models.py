@@ -10,13 +10,15 @@ class Tag(models.Model):
     
     class Meta:
         unique_together = [['name', 'user']]
-    
+        indexes = [
+            models.Index(fields=['user', 'name']),
+        ]
     def __str__(self):
         return self.name
     
 
-class tradebook(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class TradeBook(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades')
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     
     purchase_date = models.DateField(null=True, blank=True)
