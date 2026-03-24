@@ -6,7 +6,7 @@ from .models import TradeBook, Tag
 class TradeForm(forms.ModelForm):
     class Meta:
         model = TradeBook
-        
+
         fields = [
             'item',
             'purchase_date',
@@ -22,7 +22,7 @@ class TradeForm(forms.ModelForm):
             'tags',
             'notes',
         ]
-        
+
         widgets = {
             'purchase_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'purchase_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -32,16 +32,17 @@ class TradeForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'tags': forms.SelectMultiple(attrs={'class': 'form-control'}),
         }
-        
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
         if self.user:
-            self.fields['tags'] = Tag.objects.filter(user = self.user)
+            self.fields['tags'].queryset = Tag.objects.filter(user = self.user)
         else:
-            self.fields['tags'] = Tag.objects.none()
-            
+            self.fields['tags'].queryset = Tag.objects.none()
+
+
     def clean_purchase_price(self):
         price = self.cleaned_data.get('purchase_price')
         if price is None:
@@ -76,16 +77,26 @@ class TradeForm(forms.ModelForm):
         purchase_date = cleaned_data.get('purchase_date')
         sell_date = cleaned_data.get('sell_date')
         purchase_mplace = cleaned_data.get('purchase_marketplace')
+        sell_mplace = cleaned_data.get('sell_marketplace')
+        sell_custom = cleaned_data.get('sell_marketplace_custom')
         purchase_custom = cleaned_data.get('purchase_marketplace_custom')
-        
+        status = cleaned_data.get('status')
+
+
         if purchase_date and sell_date and sell_date < purchase_date:
             self.add_error('sell_date', "Sell date cannot be earlier than purchase date.")
-        
-        if purchase_price and purchase_price > 0:
-            if not cleaned_data.get('purchase_marketplace') and not cleaned_data.get('purchase_marketplace_custom'):
-                self.add_error('purchase_marketplace', "Please select a marketplace or enter a custom name.")
-                
-        status = cleaned_data.get('status')
+
+        if purchase_price and purchase_price <= 0:
+            self.add_error('purchase_price', "Purchase price must be greater than zero.")
+
+        if sell_price and sell_price <= 0:
+            self.add_error('sell_price', "Purchase price must be greater than zero.")
+
+        if purchase_date and sell_date:
+            if not sell_price: self.add_error('sell price', "you forget sell price")
+
+        if purchase_date and sell_date and purchase_price and sell_price: status='sold'
+
         if status == 'sold':
             missing = []
             if not sell_date:

@@ -29,8 +29,8 @@ class TradeBook(models.Model):
         validators=[
             MinValueValidator(Decimal('0.01')), 
             MaxValueValidator(Decimal('9999999999.99')),])
-    purchase_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="purchase_trades")
-    purchase_marketplace_custom = models.CharField(max_length=255, null=True)
+    purchase_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="purchase_trades")
+    purchase_marketplace_custom = models.CharField(max_length=255, blank=True)
     
     sell_date = models.DateField(null=True, blank=True)
     sell_price = models.DecimalField(
@@ -41,8 +41,8 @@ class TradeBook(models.Model):
         validators=[
             MinValueValidator(Decimal('0.01')), 
             MaxValueValidator(Decimal('9999999999.99')),])
-    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, null=True, related_name="sell_trades")
-    sell_marketplace_custom = models.CharField(max_length=255, null=True)
+    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="sell_trades", null=True, blank=True)
+    sell_marketplace_custom = models.CharField(max_length=255, blank=True)
     
     status = models.CharField( max_length=20,
         choices=[
@@ -65,8 +65,7 @@ class TradeBook(models.Model):
     
     def __str__(self):
         return f"{self.item} — {self.user.email}"
-      
-      
+
     @property  
     def sell_fee_amount(self) -> Decimal:
         if self.sell_price is None or not self.sell_marketplace:
@@ -84,12 +83,16 @@ class TradeBook(models.Model):
         if self.sell_price is None:
             return Decimal("0.00")
         return (self.profit / self.purchase_price) * 100
-    
+
     @property
     def buy_site(self) -> str:
-        return self.purchase_marketplace.name if self.purchase_marketplace else self.purchase_marketplace_custom or "Custom"
+        if self.purchase_marketplace.name == "custom":
+            return self.purchase_marketplace_custom or "Custom"
+        return self.purchase_marketplace.name
 
     @property
     def sell_site(self) -> str:
-        return self.sell_marketplace.name if self.sell_marketplace else self.sell_marketplace_custom or "Custom"
+        if self.sell_marketplace.name == "custom":
+            return self.sell_marketplace_custom or "Custom"
+        return self.sell_marketplace.name
       

@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'tradebook/style.css' %}">
+    <title>Document</title>
+</head>
+<body>
+    <h1>tradebook</h1>
+    <form method="POST" action="{% url 'tradebook:create_deal'%}">
+        {% csrf_token %}
+        {{ form }}
+        {{ form.errors }}
+        {{ messege }}
+        <button>submit</button>
+    </form>
+        <h1>your deals</h1>
+    {% for deal in deals %}
+        <p>{{ deal.item }} -- {{ deal.item.quality }}-- {{ deal.purchase_price }}  -- {{ deal.purchase_marketplace }} -- {{ deal.purchase_date }}  -- {{ deal.sell_marketplace }} -- {{ deal.sell_price }} -- {{ deal.profit }} -- {{ deal.status }} -- {{ deal.hold_till }} </p>
+    {% endfor %}
+</body>
+</html>
