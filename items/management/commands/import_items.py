@@ -1,10 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from items.models import Items, ItemListing
+from items.models import Item, ItemListing
 from django.db import transaction
 from pathlib import Path
 import json
 import csv
-
 
 
 class Command(BaseCommand):
@@ -61,19 +60,20 @@ class Command(BaseCommand):
                 row = {k.strip(): v.strip() for k, v in row.items() if v is not None}
                 
                 name = row.get("name")
+                name_on_market = row.get("name")
                 quality = row.get("quality")
                 source_game = row.get("source_game")
                 
-                if not name :
-                    skipped[str(position)] = "missing name"
+                if not name_on_market:
+                    skipped[str(position)] = "missing name on market"
                     continue
                     
                 if not quality :
                     skipped[str(position)] = "missing quality"
                     continue
                 
-                item, item_creted = Items.objects.get_or_create(
-                    name = self.normalize_name(name),
+                item, item_creted = Item.objects.get_or_create(
+                    name_on_market = self.normalize_name(name_on_market),
                     quality = self.normalize_name(quality),
                     source_game = source_game
                 )
@@ -129,7 +129,7 @@ class Command(BaseCommand):
                     skipped[str(position)] = "missing quality"
                     continue
                 
-                item, item_created = Items.objects.get_or_create(
+                item, item_created = Item.objects.get_or_create(
                     name = self.normalize_name(name),
                     quality = self.normalize_name(quality),
                     source_game = self.normalize_name(source_game)

@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import tradebook
+from .models import TradeBook
 
-@admin.register(tradebook)
+@admin.register(TradeBook)
 class TradeAdmin(admin.ModelAdmin):
     list_display = ['item', 'user', 'purchase_marketplace', 'purchase_date', 'purchase_price',
                     'sell_marketplace', 'sell_price', 'profit', 'status','hold_till']
