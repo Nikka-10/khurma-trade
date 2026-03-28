@@ -41,7 +41,7 @@ class TradeBook(models.Model):
         validators=[
             MinValueValidator(Decimal('0.01')), 
             MaxValueValidator(Decimal('9999999999.99')),])
-    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="sell_trades", null=True, blank=True)
+    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="sell_trades", blank=True)
     sell_marketplace_custom = models.CharField(max_length=255, blank=True)
     
     status = models.CharField( max_length=20,
@@ -76,23 +76,23 @@ class TradeBook(models.Model):
     def profit(self) -> Decimal:
         if self.sell_price is None:
             return Decimal("0.00")
-        return self.sell_price - self.purchase_price - self.sell_fee_amount
+        return round(self.sell_price - self.purchase_price - self.sell_fee_amount, 2)
     
     @property  
     def profit_percent(self) -> Decimal:
         if self.sell_price is None:
             return Decimal("0.00")
-        return (self.profit / self.purchase_price) * 100
+        return round((self.profit / self.purchase_price) * 100, 2)
 
     @property
     def buy_site(self) -> str:
         if self.purchase_marketplace.name == "custom":
-            return self.purchase_marketplace_custom or "Custom"
+            return "Custom" if not self.purchase_marketplace_custom else self.purchase_marketplace_custom
         return self.purchase_marketplace.name
 
     @property
     def sell_site(self) -> str:
         if self.sell_marketplace.name == "custom":
-            return self.sell_marketplace_custom or "Custom"
+            return "Custom" if not self.sell_marketplace_custom else self.sell_marketplace_custom
         return self.sell_marketplace.name
       
