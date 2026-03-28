@@ -29,4 +29,25 @@ def create_deal(request):
             return render(request, 'tradebook/main.html', {'form': form, 'deals': deals})
 
 
+def delete_deal(request):
+    if request.method == 'POST':
+
+        if "delete_row" in request.POST:
+            deal_id = request.POST['delete_row']
+            tradebook = TradeBook.objects.filter(id=deal_id)
+            tradebook.delete()
+        elif 'selected_deals' in request.POST:
+            ids = request.POST.getlist('selected_deals')
+            tradebook = TradeBook.objects.filter(id__in=ids)
+            tradebook.delete()
+
+        return redirect('tradebook:tradebook')
+    else:
+        form = TradeForm(request.POST)
+        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
+        return render(request, 'tradebook/main.html', {'form': form, 'deals': deals})
+
+
+
+
 

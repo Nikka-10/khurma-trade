@@ -116,3 +116,9 @@ button:hover {
 .deals-table button:hover {
     background: #0056b3;
 }
+.delete-button{
+    background-color: red !important;
+
+    &:hover{background-color: #ac0000 !important;
+    }
+}

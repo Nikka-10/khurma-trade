@@ -28,10 +28,13 @@
     </div>
 
 <h2>Your Deals</h2>
+<form method="POST" action="delete_deal">
+{% csrf_token %}
 
 <table class="deals-table">
     <thead>
         <tr>
+            <th><input type="checkbox" name="select_all"></th>
             <th>Item</th>
             <th>Quality</th>
             <th>Buy $</th>
@@ -41,12 +44,14 @@
             <th>Hold Till</th>
             <th>Status</th>
             <th>Notes</th>
+            <th><button class="delete-button" type="submit">delete all</button></th>
         </tr>
     </thead>
 
     <tbody>
         {% for deal in deals %}
         <tr>
+            <td><input type="checkbox" name="selected_deals" value="{{ deal.id }}"></td>
             <td>{{ deal.item }}</td>
             <td>{{ deal.item.quality }}</td>
             <td>{{ deal.purchase_price }}</td>
@@ -67,6 +72,8 @@
                     Show
                 </button>
             </td>
+
+        <td> <button class="delete-button" type="submit" name="delete_row" value="{{ deal.id }}">delete</button></td>
         </tr>
 
         <!-- Hidden notes row -->
@@ -79,6 +86,7 @@
         {% endfor %}
     </tbody>
 </table>
+</form>
 </div>
 
 <script>
@@ -98,6 +106,13 @@ function toggleNotes(id) {
     const row = document.getElementById("notes-" + id);
     row.classList.toggle("hidden");
 }
+
+const selectAll = document.querySelector('input[name="select_all"]');
+const checkboxes = document.querySelectorAll('input[name="selected_deals"]');
+
+selectAll.addEventListener('change', function () {
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+});
 </script>
 
 </body>
