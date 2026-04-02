@@ -38,7 +38,7 @@ class TradeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.user:
-            self.fields['tags'].queryset = Tag.objects.filter(user = self.user)
+            self.fields['tags'].queryset = Tag.objects.filter(user=self.user)
         else:
             self.fields['tags'].queryset = Tag.objects.none()
 
@@ -110,4 +110,26 @@ class TradeForm(forms.ModelForm):
                 self.add_error(None, f"When status is 'sold', please fill: {', '.join(missing)}")
 
         return cleaned_data
+
+class CreateTagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+
+        fields = ['tag',]
+
+        widgets = {
+            'tag': forms.TextInput(attrs={'class': 'form-control'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_tag(self):
+        tag = self.cleaned_data['tag']
+
+        if Tag.objects.filter(tag=tag, user=self.user ).exists():
+            raise ValidationError("Tag already exists.")
+        return tag
+
             

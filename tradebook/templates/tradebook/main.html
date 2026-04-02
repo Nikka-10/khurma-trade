@@ -8,17 +8,120 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>tradebook</h1>
-    <form method="POST" action="{% url 'tradebook:create_deal'%}">
+<div class="container">
+
+    <h1>📊 Tradebook</h1>
+    <h2>{{ user.username }}</h2>
+    <form method="post" action="{% url 'tradebook:create_tag' %}">
         {% csrf_token %}
-        {{ form }}
-        {{ form.errors }}
-        {{ messege }}
-        <button>submit</button>
+        {{ tag_form }}
+        <button>create tag</button>
+
     </form>
-        <h1>your deals</h1>
-    {% for deal in deals %}
-        <p>{{ deal.item }} -- {{ deal.item.quality }}-- {{ deal.purchase_price }}  -- {{ deal.purchase_marketplace }} -- {{ deal.purchase_date }}  -- {{ deal.sell_marketplace }} -- {{ deal.sell_price }} -- {{ deal.profit }} -- {{ deal.status }} -- {{ deal.hold_till }} </p>
-    {% endfor %}
+
+    <!-- Toggle Button -->
+    <button id="toggleBtn">+ Add Deal</button>
+    <form action="" method="POST"><input type='file' name="file"></form>
+
+    <!-- FORM (hidden by default) -->
+    <div id="formContainer" class="hidden">
+        <form method="POST" action="{% url 'tradebook:create_deal'%}">
+            {% csrf_token %}
+
+            {{ form }}
+            {{ form.errors }}
+
+            <button type="submit">Save Deal</button>
+        </form>
+    </div>
+
+<h2>Your Deals</h2>
+<form method="POST" action="delete_deal">
+{% csrf_token %}
+
+<table class="deals-table">
+    <thead>
+        <tr>
+            <th><input type="checkbox" name="select_all"></th>
+            <th>Item</th>
+            <th>Quality</th>
+            <th>Buy $</th>
+            <th>Sell $</th>
+            <th>Profit</th>
+            <th>%</th>
+            <th>Hold Till</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th><button class="delete-button" type="submit">delete all</button></th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for deal in deals %}
+        <tr>
+            <td><input type="checkbox" name="selected_deals" value="{{ deal.id }}"></td>
+            <td>{{ deal.item }}</td>
+            <td>{{ deal.item.quality }}</td>
+            <td>{{ deal.purchase_price }}</td>
+            <td>{{ deal.sell_price }}</td>
+
+            <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
+                {{ deal.profit }}
+            </td>
+
+            <td>{{ deal.profit_percent }}%</td>
+
+            <td>{{ deal.hold_till }}</td>
+
+            <td>{{ deal.status }}</td>
+
+            <td>
+                <button type="button" onclick="toggleNotes({{ forloop.counter }})">
+                    Show
+                </button>
+            </td>
+
+        <td> <button class="delete-button" type="submit" name="delete_row" value="{{ deal.id }}">delete</button></td>
+        </tr>
+
+        <!-- Hidden notes row -->
+        <tr id="notes-{{ forloop.counter }}" class="hidden">
+            <td colspan="9">
+                <strong>Notes:</strong> {{ deal.notes|default:"No notes" }}
+            </td>
+        </tr>
+
+        {% endfor %}
+    </tbody>
+</table>
+</form>
+</div>
+
+<script>
+const btn = document.getElementById("toggleBtn");
+const form = document.getElementById("formContainer");
+
+btn.addEventListener("click", () => {
+    form.classList.toggle("hidden");
+});
+
+// OPTIONAL: hide after submit
+document.querySelector("form").addEventListener("submit", () => {
+    form.classList.add("hidden");
+});
+
+function toggleNotes(id) {
+    const row = document.getElementById("notes-" + id);
+    row.classList.toggle("hidden");
+}
+
+const selectAll = document.querySelector('input[name="select_all"]');
+const checkboxes = document.querySelectorAll('input[name="selected_deals"]');
+
+selectAll.addEventListener('change', function () {
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+});
+</script>
+
 </body>
 </html>

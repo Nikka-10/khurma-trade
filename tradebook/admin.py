@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TradeBook
+from .models import TradeBook, Tag
 
 @admin.register(TradeBook)
 class TradeAdmin(admin.ModelAdmin):
@@ -8,4 +8,8 @@ class TradeAdmin(admin.ModelAdmin):
     list_filter = ['status', 'purchase_date', 'item__source_game']  
     search_fields = ['item__name_on_market', 'user__email', 'notes']
     readonly_fields = ['profit', 'sell_fee_amount', 'buy_site', 'sell_marketplace']
-    
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ['tag', 'user']
