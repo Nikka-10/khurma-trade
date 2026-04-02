@@ -6,16 +6,16 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=255)
+    tag = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     
     class Meta:
-        unique_together = [['name', 'user']]
+        unique_together = [['tag', 'user']]
         indexes = [
-            models.Index(fields=['user', 'name']),
+            models.Index(fields=['user', 'tag']),
         ]
     def __str__(self):
-        return self.name
+        return self.tag
     
 
 class TradeBook(models.Model):

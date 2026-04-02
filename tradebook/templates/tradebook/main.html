@@ -10,10 +10,18 @@
 <body>
 <div class="container">
 
-    <h1 >📊 Tradebook</h1>
+    <h1>📊 Tradebook</h1>
+    <h2>{{ user.username }}</h2>
+    <form method="post" action="{% url 'tradebook:create_tag' %}">
+        {% csrf_token %}
+        {{ tag_form }}
+        <button>create tag</button>
+
+    </form>
 
     <!-- Toggle Button -->
     <button id="toggleBtn">+ Add Deal</button>
+    <form action="" method="POST"><input type='file' name="file"></form>
 
     <!-- FORM (hidden by default) -->
     <div id="formContainer" class="hidden">
@@ -68,7 +76,7 @@
             <td>{{ deal.status }}</td>
 
             <td>
-                <button onclick="toggleNotes({{ forloop.counter }})">
+                <button type="button" onclick="toggleNotes({{ forloop.counter }})">
                     Show
                 </button>
             </td>
