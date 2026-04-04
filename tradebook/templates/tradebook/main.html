@@ -4,122 +4,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link rel="stylesheet" href="{% static 'tradebook/style.css' %}">
-    <title>Document</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <title>Tradebook</title>
 </head>
 <body>
+
 <div class="container">
 
     <h1>📊 Tradebook</h1>
     <h2>{{ user.username }}</h2>
+
+
+    <br><br>
+    <!-- CREATE TAG -->
     <form method="post" action="{% url 'tradebook:create_tag' %}">
         {% csrf_token %}
         {{ tag_form }}
-        <button>create tag</button>
-
+        <br>
+        <button type="submit">Create Tag</button>
     </form>
+    <br>
+    <!-- MAIN LAYOUT -->
+    <div class="main-layout">
 
-    <!-- Toggle Button -->
-    <button id="toggleBtn">+ Add Deal</button>
-    <form action="" method="POST"><input type='file' name="file"></form>
+        <!-- SIDEBAR -->
+        <div class="sidebar">
 
-    <!-- FORM (hidden by default) -->
+    <h3>📁 Tags</h3>
+
+    <a hx-get="{% url 'tradebook:tradebook' %}"
+       hx-target="#deals"
+       hx-push-url="true">
+        All
+    </a>
+
+    {% for tag in tags %}
+        <a hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
+           hx-target="#deals"
+           hx-push-url="true">
+            {{ tag.tag }}
+        </a>
+    {% endfor %}
+
+    <h3>📅 By Month</h3>
+
+    {% for m in months %}
+        <a
+            hx-get="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}"
+            hx-target="#deals"
+            hx-push-url="true"
+        >
+            {{ m.month|date:"F Y" }}
+        </a>
+    {% endfor %}
+
+</div>
+
+
+    <div class="deal-side">
+     <button id="toggleBtn">+ Add Deal</button>
+
+
     <div id="formContainer" class="hidden">
-        <form method="POST" action="{% url 'tradebook:create_deal'%}">
+        <form method="POST" action="{% url 'tradebook:create_deal' %}">
             {% csrf_token %}
-
             {{ form }}
             {{ form.errors }}
-
             <button type="submit">Save Deal</button>
         </form>
     </div>
+        <!-- DEALS -->
+        <div id="deals" class="deals-container">
+            {% include 'tradebook/partials/deals.html' %}
+        </div>
 
-<h2>Your Deals</h2>
-<form method="POST" action="delete_deal">
-{% csrf_token %}
-
-<table class="deals-table">
-    <thead>
-        <tr>
-            <th><input type="checkbox" name="select_all"></th>
-            <th>Item</th>
-            <th>Quality</th>
-            <th>Buy $</th>
-            <th>Sell $</th>
-            <th>Profit</th>
-            <th>%</th>
-            <th>Hold Till</th>
-            <th>Status</th>
-            <th>Notes</th>
-            <th><button class="delete-button" type="submit">delete all</button></th>
-        </tr>
-    </thead>
-
-    <tbody>
-        {% for deal in deals %}
-        <tr>
-            <td><input type="checkbox" name="selected_deals" value="{{ deal.id }}"></td>
-            <td>{{ deal.item }}</td>
-            <td>{{ deal.item.quality }}</td>
-            <td>{{ deal.purchase_price }}</td>
-            <td>{{ deal.sell_price }}</td>
-
-            <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
-                {{ deal.profit }}
-            </td>
-
-            <td>{{ deal.profit_percent }}%</td>
-
-            <td>{{ deal.hold_till }}</td>
-
-            <td>{{ deal.status }}</td>
-
-            <td>
-                <button type="button" onclick="toggleNotes({{ forloop.counter }})">
-                    Show
-                </button>
-            </td>
-
-        <td> <button class="delete-button" type="submit" name="delete_row" value="{{ deal.id }}">delete</button></td>
-        </tr>
-
-        <!-- Hidden notes row -->
-        <tr id="notes-{{ forloop.counter }}" class="hidden">
-            <td colspan="9">
-                <strong>Notes:</strong> {{ deal.notes|default:"No notes" }}
-            </td>
-        </tr>
-
-        {% endfor %}
-    </tbody>
-</table>
-</form>
+    </div>
+    </div>
 </div>
 
 <script>
 const btn = document.getElementById("toggleBtn");
-const form = document.getElementById("formContainer");
+const formContainer = document.getElementById("formContainer");
 
 btn.addEventListener("click", () => {
-    form.classList.toggle("hidden");
+    formContainer.classList.toggle("hidden");
 });
 
-// OPTIONAL: hide after submit
-document.querySelector("form").addEventListener("submit", () => {
-    form.classList.add("hidden");
-});
-
+// NOTES TOGGLE
 function toggleNotes(id) {
     const row = document.getElementById("notes-" + id);
     row.classList.toggle("hidden");
 }
 
-const selectAll = document.querySelector('input[name="select_all"]');
-const checkboxes = document.querySelectorAll('input[name="selected_deals"]');
+// SELECT ALL
+document.addEventListener("DOMContentLoaded", () => {
+    const selectAll = document.querySelector('input[name="select_all"]');
 
-selectAll.addEventListener('change', function () {
-    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('input[name="selected_deals"]').forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+        });
+    }
 });
 </script>
 

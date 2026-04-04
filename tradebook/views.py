@@ -1,23 +1,62 @@
-from django.shortcuts import render, redirect
+from django.db.models import Sum
+from django.shortcuts import render, redirect, get_object_or_404
 from items.models import Item, ItemListing, Marketplace
 from django.contrib.auth.decorators import login_required
-from .models import TradeBook
+from .models import TradeBook, Tag
 from users.models import User
 from .forms import TradeForm, CreateTagForm
-from django.contrib import messages
+from django.db.models.functions import TruncMonth
 
 
 #@login_required
 def tradebook_view(request):
+    tag_id = request.GET.get('tag')
+    date = request.GET.get('date')
+    deals = TradeBook.objects.filter(user=request.user).order_by('-id')
+
+    if tag_id:
+        tag = get_object_or_404(Tag, id=tag_id, user=request.user)
+        deals = deals.filter(tags=tag)
+
+    if date:
+        year, month = date.split('-')
+        deals = deals.filter(
+            purchase_date__year=year,
+            purchase_date__month=month,
+            user=request.user)
+
+    whole_profit = sum(
+        deal.profit or 0
+        for deal in deals
+    )
+
+    months = (
+        TradeBook.objects
+        .filter(user=request.user)
+        .annotate(month=TruncMonth('purchase_date'))
+        .values('month')
+        .distinct()
+        .order_by('-month')
+    )
+
+    tags = Tag.objects.filter(user=request.user)
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'tradebook/partials/deals.html', {
+            'deals': deals,
+            "whole_profit": whole_profit
+        })
+
     form = TradeForm(user=request.user)
     tag_form = CreateTagForm()
-    deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-    user = request.user
-    return render(request, 'tradebook/main.html',{
+
+    return render(request, 'tradebook/main.html', {
         "form": form,
         "deals": deals,
-        'user': user,
-        'tag_form': tag_form,
+        "tag_form": tag_form,
+        "tags": tags,
+        "months": months,
+        "whole_profit": whole_profit,
     })
 
 def create_deal(request):
