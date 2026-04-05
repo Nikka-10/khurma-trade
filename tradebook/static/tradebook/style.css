@@ -8,7 +8,7 @@ body {
 
 /* Layout */
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: auto;
 }
 
@@ -121,4 +121,104 @@ button:hover {
 
     &:hover{background-color: #ac0000 !important;
     }
+}/* ===== NEW: MAIN LAYOUT (sidebar + deals) ===== */
+.main-layout {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* ===== SIDEBAR (TAGS) ===== */
+.sidebar {
+    width: 200px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.sidebar h3 {
+    margin-top: 0;
+}
+
+/* Tag links */
+.sidebar a {
+    display: block;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    text-decoration: none;
+    color: #333;
+    border-radius: 6px;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+/* Hover */
+.sidebar a:hover {
+    background: #e9f2ff;
+}
+
+/* Active tag */
+.sidebar a.active {
+    background: #007BFF;
+    color: white;
+    font-weight: bold;
+}
+
+/* ===== DEALS CONTAINER ===== */
+.deals-container {
+    flex: 1;
+}
+
+/* ===== IMPROVE TABLE LOOK ===== */
+.deals-table {
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+/* Rounded corners fix */
+.deals-table thead tr th:first-child {
+    border-top-left-radius: 10px;
+}
+.deals-table thead tr th:last-child {
+    border-top-right-radius: 10px;
+}
+
+/* ===== NOTES ROW ===== */
+.notes-row {
+    background: #f0f4ff !important;
+}
+
+/* ===== BUTTON VARIANTS ===== */
+.delete-button {
+    background-color: #e74c3c !important;
+}
+
+.delete-button:hover {
+    background-color: #c0392b !important;
+}
+
+/* Smaller buttons in table */
+.deals-table button {
+    padding: 5px 8px;
+    font-size: 13px;
+}
+
+/* ===== LOADING INDICATOR (HTMX) ===== */
+#loading {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #555;
+}
+
+.deal-side{
+    display: flex;
+    flex-direction: column;
+}
+
+.cross-month-buy {
+    background-color: #ffcccc;
+}
+
+.cross-month-sell {
+    background-color: #ccffcc;
 }

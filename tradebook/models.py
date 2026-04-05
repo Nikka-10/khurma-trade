@@ -71,8 +71,8 @@ class TradeBook(models.Model):
         if self.sell_price is None or not self.sell_marketplace:
             return Decimal("0.00")
         return self.sell_price * (self.sell_marketplace.fee_percent / Decimal("100"))
-    
-    @property  
+
+    @property
     def profit(self) -> Decimal:
         if self.sell_price is None:
             return Decimal("0.00")
@@ -95,4 +95,22 @@ class TradeBook(models.Model):
         if self.sell_marketplace.name == "custom":
             return "Custom" if not self.sell_marketplace_custom else self.sell_marketplace_custom
         return self.sell_marketplace.name
+
+    @property
+    def purchase_month(self):
+        return self.purchase_date.month if self.purchase_date else None
+
+    @property
+    def sell_month(self):
+        return self.sell_date.month if self.sell_date else None
+
+    @property
+    def is_cross_month(self):
+        if not self.sell_date or not self.purchase_date:
+            return False
+
+        return (
+                self.sell_date.year != self.purchase_date.year or
+                self.sell_date.month != self.purchase_date.month
+        )
       

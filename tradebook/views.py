@@ -1,33 +1,51 @@
-from django.shortcuts import render, redirect
+from django.db.models import Sum
+from django.shortcuts import render, redirect, get_object_or_404
 from items.models import Item, ItemListing, Marketplace
 from django.contrib.auth.decorators import login_required
-from .models import TradeBook
+from .models import TradeBook, Tag
 from users.models import User
 from .forms import TradeForm, CreateTagForm
-from django.contrib import messages
-
+from django.db.models.functions import TruncMonth
+from . import services
 
 #@login_required
 def tradebook_view(request):
+    tag_id = request.GET.get('tag')
+    date = request.GET.get('date')
+
+    deals = services.get_deals(request.user, tag_id=tag_id, date=date)
+
+    whole_profit = services.calc_whole_profit(deals)
+    monthly_profit = services.get_monthly_profit(request.user, date)
+    months = services.get_months(request.user)
+    tags = Tag.objects.filter(user=request.user)
+    is_month_view = bool(date)# some AI stuf for front-end, gonna delete later
+    if request.headers.get('HX-Request'):
+        return render(request, 'tradebook/partials/deals.html', {
+            'deals': deals,
+            "whole_profit": whole_profit,
+            "monthly_profit": monthly_profit,
+            "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
+        })
+
     form = TradeForm(user=request.user)
     tag_form = CreateTagForm()
-    deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-    user = request.user
-    return render(request, 'tradebook/main.html',{
+
+    return render(request, 'tradebook/main.html', {
         "form": form,
         "deals": deals,
-        'user': user,
-        'tag_form': tag_form,
+        "tag_form": tag_form,
+        "tags": tags,
+        "months": months,
+        "whole_profit": whole_profit,
+        "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
     })
 
 def create_deal(request):
     if request.method == 'POST':
         form = TradeForm(request.POST, user=request.user)
         if form.is_valid():
-            trade = form.save(commit=False)
-            trade.user = request.user
-            trade.save()
-            form.save_m2m()
+            services.create_deal(request.user, form)
             return redirect('tradebook:tradebook')
         else:
             tag_form = CreateTagForm(request.POST)
@@ -40,12 +58,10 @@ def delete_deal(request):
 
         if "delete_row" in request.POST:
             deal_id = request.POST['delete_row']
-            tradebook = TradeBook.objects.filter(id=deal_id, user=request.user)
-            tradebook.delete()
+            services.delete_deal(request.user, deal_id=deal_id)
         elif 'selected_deals' in request.POST:
-            ids = request.POST.getlist('selected_deals')
-            tradebook = TradeBook.objects.filter(id__in=ids, user=request.user)
-            tradebook.delete()
+            deal_ids = request.POST.getlist('selected_deals')
+            services.delete_deal(request.user, deal_ids=deal_ids)
 
         return redirect('tradebook:tradebook')
     else:
@@ -59,9 +75,7 @@ def create_tag(request):
     if request.method == 'POST':
         tag_form = CreateTagForm(request.POST, user=request.user)
         if tag_form.is_valid():
-            tag = tag_form.save(commit=False)
-            tag.user = request.user
-            tag.save()
+            services.create_tag(request.user, tag_form)
             return redirect('tradebook:tradebook')
         else:
             form = TradeForm(request.POST)
