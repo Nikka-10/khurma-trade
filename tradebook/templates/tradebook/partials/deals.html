@@ -1,10 +1,19 @@
 <h2>Your Deals</h2>
+
 <p>
   Profit:
   <span style="color: {% if whole_profit >= 0 %}green{% else %}red{% endif %}">
     <strong>{{ whole_profit }}$</strong>
   </span>
 </p>
+
+<h3>
+  Monthly Result:
+  <span style="color: {% if monthly_profit > 0 %}green{% else %}red{% endif %}">
+    {{ monthly_profit }}
+  </span>
+</h3>
+
 <form method="POST" action="{% url 'tradebook:delete_deal' %}">
 {% csrf_token %}
 
@@ -15,11 +24,18 @@
             <th>Item</th>
             <th>Buy</th>
             <th>Sell</th>
+            <th>Purchase date</th>
+            <th>Sell date</th>
             <th>Profit</th>
+            <th>%</th>
+            <th>Buy site</th>
+            <th>Sell site</th>
             <th>Status</th>
             <th>Notes</th>
             <th>
-                <button type="submit">Delete Selected</button>
+                <button style="background-color: #ac0000" type="submit">
+                    Delete Selected
+                </button>
             </th>
         </tr>
     </thead>
@@ -27,14 +43,44 @@
     <tbody>
         {% for deal in deals %}
         <tr>
-            <td><input type="checkbox" name="selected_deals" value="{{ deal.id }}"></td>
+
+            <td>
+                <input type="checkbox" name="selected_deals" value="{{ deal.id }}">
+            </td>
+
             <td>{{ deal.item }}</td>
-            <td>{{ deal.purchase_price }}$</td>
-            <td>{{ deal.sell_price }}$</td>
+
+            {# 🟥 BUY CELL #}
+            <td style="
+                {% if deal.sell_date and deal.is_cross_month %}
+                    background-color: #ffcccc;
+                {% endif %}
+            ">
+                {{ deal.purchase_price }}$
+            </td>
+
+            {# 🟩 SELL CELL #}
+            <td style="
+                {% if deal.sell_date and deal.is_cross_month %}
+                    background-color: #ccffcc;
+                {% endif %}
+            ">
+                {{ deal.sell_price|default:"not sold" }}$
+            </td>
+
+            <td>{{ deal.purchase_date }}</td>
+            <td>{{ deal.sell_date }}</td>
 
             <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
                 {{ deal.profit }}$
             </td>
+
+            <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
+                {{ deal.profit_percent }}%
+            </td>
+
+            <td>{{ deal.buy_site }}</td>
+            <td>{{ deal.sell_site|default:"not sold" }}</td>
 
             <td>{{ deal.status }}</td>
 
@@ -45,21 +91,25 @@
             </td>
 
             <td>
-                <button type="submit" name="delete_row" value="{{ deal.id}}">
+                <button style="background-color: #ac0000"
+                        type="submit"
+                        name="delete_row"
+                        value="{{ deal.id }}">
                     Delete
                 </button>
             </td>
+
         </tr>
 
         <tr id="notes-{{ forloop.counter }}" class="hidden">
-            <td colspan="8">
+            <td colspan="13">
                 {{ deal.notes|default:"No notes" }}
             </td>
         </tr>
 
         {% empty %}
         <tr>
-            <td colspan="8">No deals found</td>
+            <td colspan="13">No deals found</td>
         </tr>
         {% endfor %}
     </tbody>

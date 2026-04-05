@@ -8,7 +8,7 @@ body {
 
 /* Layout */
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: auto;
 }
 
@@ -213,4 +213,12 @@ button:hover {
 .deal-side{
     display: flex;
     flex-direction: column;
+}
+
+.cross-month-buy {
+    background-color: #ffcccc;
+}
+
+.cross-month-sell {
+    background-color: #ccffcc;
 }
