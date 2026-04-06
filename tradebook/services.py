@@ -32,15 +32,6 @@ def create_deal(user, form):
     form.save_m2m()
     return deal
 
-def create_tag(user, form):
-    tag = form.save(commit=False)
-    tag.user = user
-    tag.save()
-
-
-def calc_whole_profit(deals_qs):
-    return sum(deal.profit or Decimal('0') for deal in deals_qs)
-
 
 def delete_deal(user, deal_id=None, deal_ids=None):
     if deal_id:
@@ -48,6 +39,20 @@ def delete_deal(user, deal_id=None, deal_ids=None):
     elif deal_ids:
         TradeBook.objects.filter(user=user, id__in=deal_ids).delete()
 
+
+def create_tag(user, form):
+    tag = form.save(commit=False)
+    tag.user = user
+    tag.save()
+
+
+def delete_tag(user, tag_id=None):
+    tag = get_object_or_404(Tag, id=tag_id, user=user)
+    tag.delete()
+
+
+def calc_whole_profit(deals_qs):
+    return sum(deal.profit or Decimal('0') for deal in deals_qs)
 
 def get_months(user):
     months_qs = (TradeBook.objects

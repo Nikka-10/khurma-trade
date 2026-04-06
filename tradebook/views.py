@@ -19,6 +19,7 @@ def tradebook_view(request):
     monthly_profit = services.get_monthly_profit(request.user, date)
     months = services.get_months(request.user)
     tags = Tag.objects.filter(user=request.user)
+
     is_month_view = bool(date)# some AI stuf for front-end, gonna delete later
     if request.headers.get('HX-Request'):
         return render(request, 'tradebook/partials/deals.html', {
@@ -57,7 +58,7 @@ def delete_deal(request):
     if request.method == 'POST':
 
         if "delete_row" in request.POST:
-            deal_id = request.POST['delete_row']
+            deal_id = request.POST.get('delete_row')
             services.delete_deal(request.user, deal_id=deal_id)
         elif 'selected_deals' in request.POST:
             deal_ids = request.POST.getlist('selected_deals')
@@ -82,6 +83,16 @@ def create_tag(request):
             deals = TradeBook.objects.filter(user=request.user).order_by('-id')
             return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
 
+
+def delete_tag(request):
+    if request.method == 'POST':
+        services.delete_tag(request.user, request.POST.get('tag'))
+        return redirect('tradebook:tradebook')
+    else:
+        tag_form = CreateTagForm(request.POST)
+        form = TradeForm(request.POST)
+        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
+        return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
 
 #gonna create later
 def uplaod_csv(request):
