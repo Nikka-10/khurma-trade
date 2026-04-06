@@ -41,13 +41,35 @@
         All
     </a>
 
-    {% for tag in tags %}
-        <a hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
-           hx-target="#deals"
-           hx-push-url="true">
-            {{ tag.tag }}
-        </a>
-    {% endfor %}
+{% for tag in tags %}
+<div style="display:inline-flex; align-items:center; gap:6px; margin-right:8px;">
+
+    <a href="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
+       hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
+       hx-target="#deals"
+       hx-push-url="true"
+       style="text-decoration:none;">
+        {{ tag.tag }}
+    </a>
+
+    <form method="POST" action="{% url 'tradebook:delete_tag' %}" style="margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="tag" value="{{ tag.id }}">
+
+        <button type="submit"
+            style="
+                background:none;
+                border:none;
+                cursor:pointer;
+                padding:0;
+                font-size:16px;
+            ">
+            <span>🗑️</span>
+        </button>
+    </form>
+
+</div>
+{% endfor %}
 
     <h3>📅 By Month</h3>
 
