@@ -46,9 +46,11 @@ def create_deal(request):
     if request.method == 'POST':
         form = TradeForm(request.POST, user=request.user)
         if form.is_valid():
+            print("validation is right but it cant create deaL")
             services.create_deal(request.user, form)
             return redirect('tradebook:tradebook')
         else:
+            print("problem is in validation")
             tag_form = CreateTagForm(request.POST)
             deals = TradeBook.objects.filter(user=request.user).order_by('-id')
             return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})

@@ -28,10 +28,11 @@ def get_deals(user, tag_id=None, date=None):
 def create_deal(user, form):
     deal = form.save(commit=False)
     deal.user = user
-    deal.save()
+    try:
+        deal.save()
+    except Exception as e:
+        print("SAVE ERROR:", e)
     form.save_m2m()
-    return deal
-
 
 def delete_deal(user, deal_id=None, deal_ids=None):
     if deal_id:
