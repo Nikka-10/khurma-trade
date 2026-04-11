@@ -3,6 +3,7 @@ from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from .models import TradeBook, Tag
 from decimal import Decimal
+from .importers.import_csv import ImporterForCsv
 
 
 def get_deals(user, tag_id=None, date=None):
@@ -93,3 +94,7 @@ def get_monthly_profit(user, date):
     )['total'] or Decimal('0')
 
     return get_money - spend_money
+
+def import_csv(user, csv_file):
+    return ImporterForCsv(user).run(csv_file)
+

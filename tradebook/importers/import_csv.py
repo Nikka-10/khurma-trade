@@ -1,5 +1,5 @@
 import csv
-import os
+import io
 from items.models import Item, Marketplace
 from tradebook.models import TradeBook, Tag
 from decimal import Decimal, InvalidOperation
@@ -54,7 +54,7 @@ class ImporterForCsv:
             self.result['file_error'] = "file must be in UTF-8 format"
             return self.result
 
-        reader = csv.DictReader(decoded)
+        reader = csv.DictReader(io.StringIO(decoded))
 
         error = self.check_headers(reader.fieldnames)
         if error:
@@ -63,11 +63,11 @@ class ImporterForCsv:
 
         self.load_cache() # loading data from db
 
-        for i, row in enumerate(reader):
-            if i > self.MAX_ROWS:
+        for i, row in enumerate(reader, start=2):
+            if i > self.MAX_ROWS + 1:
                 self.result['file_error'] = f"too many rows, max number: {self.MAX_ROWS}"
                 break
-            self.process_row(row, row_num=i) # very important thing broza
+            self.process_row(row, row_num=i) # very important thing broza!(here starts everything)
 
         return self.result
 
@@ -75,7 +75,7 @@ class ImporterForCsv:
     def check_file(self, csv_file):
         if csv_file.size > self.MAX_FILE_LENGTH:
             return "File is too large, max file size 5mb"
-        if not csv_file.endswith(".csv"):
+        if not csv_file.name.lower().endswith(".csv"):
             return "File is not a csv"
 
         return None
@@ -89,7 +89,7 @@ class ImporterForCsv:
 
     def load_cache(self):
         self.items_cache = {
-            Item.name.lower(): item
+            item.name_on_market.lower(): item
             for item in Item.objects.all()
         }
         self.marketplace_cache = {
@@ -107,7 +107,8 @@ class ImporterForCsv:
 
         valid_data, errors = self.validate_row(row)
         if errors:
-            self.result['skipped'].append({'row':row_num, 'error': errors})
+            print(f"Row {row_num} errors: {errors}")
+            self.result['skipped'].append({'row':row_num, 'errors': errors})
             return
 
         try:
@@ -215,7 +216,7 @@ class ImporterForCsv:
                     errors.append('sell_date is required when status is sold')
 
 
-        notes = row.get('notes', '').strip()
+        notes = (row.get('notes') or '').strip()
         if len(notes) > 5000:
             errors.append('notes too long, max 5000 characters')
         else:
@@ -233,11 +234,18 @@ class ImporterForCsv:
 
 
     def validate_item(self, value, field_name, errors):
+        value = (value or "").strip().lower()
+
         if not value:
             errors.append(f'{field_name} is required')
-        if value not in self.items_cache:
+            return None
+
+        item = self.items_cache.get(value)
+        if not item:
             errors.append(f'Item "{value}" not found in database')
-        return value
+            return None
+
+        return item
 
 
     def validate_price(self, value, field_name, required, errors):
@@ -282,6 +290,7 @@ class ImporterForCsv:
 
         if marketplace and custom_name:
             errors.append(f"{field_name}_custom should be empty unless using custom marketplace")
+            return marketplace, ''
 
         return marketplace, custom_name
 
@@ -293,7 +302,7 @@ class ImporterForCsv:
             return None
 
         try:
-            return datetime.strptime(value, '%Y-%m-%d').date()
+            return datetime.strptime(value, self.DATE_FORMAT).date()
         except ValueError:
             errors.append(f'{field_name} is not a valid date')
             return None

@@ -97,25 +97,28 @@ def delete_tag(request):
         return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
 
 #gonna create later
-def uplaod_csv(request):
+def upload_csv(request):
     if request.method == 'POST':
-        csvfile = request.FILES.get('file')
-        expected_fields = [
-            'item',
-            'purchase_date',
-            'purchase_price',
-            'purchase_marketplace',
-            'purchase_marketplace_custom',
-            'sell_date',
-            'sell_price',
-            'sell_marketplace',
-            'sell_marketplace_custom',
-            'status',
-            'hold_till',
-            'tags',
-            'notes',
-        ]
-        skipped = {}
+        csv_file = request.FILES['csv_file']
+        if not csv_file:
+            return redirect('tradebook:tradebook')
+        result = services.import_csv(request.user, csv_file)
+
+        tag_form = CreateTagForm(request.POST)
+        form = TradeForm(request.POST)
+        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
+
+        return render(
+            request,
+            'tradebook/main.html',
+            {
+                'form': form,
+                'deals': deals,
+                'tag_form': tag_form,
+                'result': result
+            }
+        )
+    return redirect('tradebook:tradebook')
 
 
 
