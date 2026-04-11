@@ -16,7 +16,7 @@ class Marketplace(models.Model):
     
 
 class Item(models.Model):
-    name = models.CharField(max_length=255, null=True)
+    name = models.CharField(max_length=255)
     name_on_market = models.CharField(max_length=255, unique=True)
     quality = models.CharField(max_length=50, null=True)
     source_game = models.CharField(max_length=30, choices=Game)

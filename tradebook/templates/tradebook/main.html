@@ -89,6 +89,43 @@
     <div class="deal-side">
      <button id="toggleBtn">+ Add Deal</button>
 
+    <form method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="csv_file" accept=".csv">
+        <button type="submit">Upload CSV</button>
+    </form>
+
+        {% if result.file_error %}
+    <p style="color: red">{{ result.file_error }}</p>
+
+{% else %}
+    <p style="color: green">Successfully imported: {{ result.created }} deals</p>
+
+    {% if result.skipped %}
+        <p>Skipped {{ result.skipped|length }} rows:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Row</th>
+                    <th>Errors</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for skip in result.skipped %}
+                <tr>
+                    <td>{{ skip.row }}</td>
+                    <td>
+                        {% for error in skip.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endif %}
+
 
     <div id="formContainer" class="hidden">
         <form method="POST" action="{% url 'tradebook:create_deal' %}">

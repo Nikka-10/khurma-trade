@@ -41,7 +41,7 @@ class TradeBook(models.Model):
         validators=[
             MinValueValidator(Decimal('0.01')), 
             MaxValueValidator(Decimal('9999999999.99')),])
-    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="sell_trades", blank=True)
+    sell_marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE, related_name="sell_trades", blank=True, null=True)
     sell_marketplace_custom = models.CharField(max_length=255, blank=True)
     
     status = models.CharField( max_length=20,
@@ -92,8 +92,12 @@ class TradeBook(models.Model):
 
     @property
     def sell_site(self) -> str:
+        if not self.sell_marketplace:
+            return "not sold"
+
         if self.sell_marketplace.name == "custom":
-            return "Custom" if not self.sell_marketplace_custom else self.sell_marketplace_custom
+            return self.sell_marketplace_custom or "Custom"
+
         return self.sell_marketplace.name
 
     @property
