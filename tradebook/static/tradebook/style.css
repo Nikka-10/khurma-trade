@@ -221,4 +221,64 @@ button:hover {
 
 .cross-month-sell {
     background-color: #ccffcc;
+}.deals-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.deals-table th, .deals-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.hidden {
+    display: none;
+}
+
+.notes-box {
+    background: #f9f9f9;
+    padding: 10px;
+}
+
+.edit-form {
+    background: #f4f6f8;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    background: #ddd;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.btn-success {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-danger {
+    background: #ac0000;
+    color: white;
+}
+
+.profit-pos {
+    color: green;
+}
+
+.profit-neg {
+    color: red;
 }

@@ -8,7 +8,7 @@ from .forms import TradeForm, CreateTagForm
 from django.db.models.functions import TruncMonth
 from . import services
 
-#@login_required
+@login_required
 def tradebook_view(request):
     tag_id = request.GET.get('tag')
     date = request.GET.get('date')
@@ -27,6 +27,7 @@ def tradebook_view(request):
             "whole_profit": whole_profit,
             "monthly_profit": monthly_profit,
             "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
+            'marketplaces': services.get_marketplaces()
         })
 
     form = TradeForm(user=request.user)
@@ -40,22 +41,34 @@ def tradebook_view(request):
         "months": months,
         "whole_profit": whole_profit,
         "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
+        'marketplaces': services.get_marketplaces()
     })
 
+@login_required
+def render_main(request, extra_context=None):
+    context = {
+        'form': TradeForm(user=request.user),
+        'deals': services.get_deals(request.user),
+        'tag_form': CreateTagForm(),
+        'tags': services.get_tags(request.user),
+        'months': services.get_months(request.user),
+        'marketplaces': services.get_marketplaces()
+    }
+    if extra_context:
+        context.update(extra_context)
+    return render(request, 'tradebook/main.html', context)
+
+@login_required
 def create_deal(request):
     if request.method == 'POST':
         form = TradeForm(request.POST, user=request.user)
         if form.is_valid():
-            print("validation is right but it cant create deaL")
             services.create_deal(request.user, form)
             return redirect('tradebook:tradebook')
         else:
-            print("problem is in validation")
-            tag_form = CreateTagForm(request.POST)
-            deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-            return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
+            return render_main(request, extra_context={'form': form})
 
-
+@login_required
 def delete_deal(request):
     if request.method == 'POST':
 
@@ -65,15 +78,24 @@ def delete_deal(request):
         elif 'selected_deals' in request.POST:
             deal_ids = request.POST.getlist('selected_deals')
             services.delete_deal(request.user, deal_ids=deal_ids)
-
         return redirect('tradebook:tradebook')
     else:
-        tag_form = CreateTagForm(request.POST)
-        form = TradeForm(request.POST)
-        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-        return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
+        return render_main(request)
+
+@login_required
+def edit_deal(request, deal_id):
+    deal = get_object_or_404(TradeBook, id=deal_id, user=request.user)
+    if request.method == 'POST':
+        form = TradeForm(request.POST, instance=deal, user=request.user)
+        if form.is_valid():
+            services.edit_deal(form)
+            return redirect('tradebook:tradebook')
+        print("problem with validation")
+        print(form.errors)
+        return render_main(request, {'form': form})
 
 
+@login_required
 def create_tag(request):
     if request.method == 'POST':
         tag_form = CreateTagForm(request.POST, user=request.user)
@@ -81,22 +103,19 @@ def create_tag(request):
             services.create_tag(request.user, tag_form)
             return redirect('tradebook:tradebook')
         else:
-            form = TradeForm(request.POST)
-            deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-            return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
+            return render_main(request, {'tag_form': tag_form})
 
 
+@login_required
 def delete_tag(request):
     if request.method == 'POST':
         services.delete_tag(request.user, request.POST.get('tag'))
         return redirect('tradebook:tradebook')
     else:
-        tag_form = CreateTagForm(request.POST)
-        form = TradeForm(request.POST)
-        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-        return render(request, 'tradebook/main.html', {'form': form, 'deals': deals, 'tag_form': tag_form})
+       return render_main(request)
 
-#gonna create later
+
+@login_required
 def upload_csv(request):
     if request.method == 'POST':
         csv_file = request.FILES['csv_file']
@@ -104,21 +123,15 @@ def upload_csv(request):
             return redirect('tradebook:tradebook')
         result = services.import_csv(request.user, csv_file)
 
-        tag_form = CreateTagForm(request.POST)
-        form = TradeForm(request.POST)
-        deals = TradeBook.objects.filter(user=request.user).order_by('-id')
-
-        return render(
-            request,
-            'tradebook/main.html',
-            {
-                'form': form,
-                'deals': deals,
-                'tag_form': tag_form,
-                'result': result
-            }
-        )
+        return render_main(request, extra_context={'result':result})
     return redirect('tradebook:tradebook')
 
 
+@login_required
+def search_items(request):
+    query = request.GET.get('query', '').strip()
+    if len(query) < 2:
+        return render(request, 'tradebook/partials/item_results.html', {'items': []})
+    items = services.search_item(query)
+    return render(request, 'tradebook/partials/item_results.html', {'items': items})
 

@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404
 from .models import TradeBook, Tag
 from decimal import Decimal
 from .importers.import_csv import ImporterForCsv
+from items.models import Marketplace
+from items.models import Item
 
 
 def get_deals(user, tag_id=None, date=None):
@@ -42,16 +44,27 @@ def delete_deal(user, deal_id=None, deal_ids=None):
         TradeBook.objects.filter(user=user, id__in=deal_ids).delete()
 
 
+def edit_deal(form):
+    deal = form.save(commit=False)
+    deal.save()
+    form.save_m2m()
+    return deal
+
+
 def create_tag(user, form):
     tag = form.save(commit=False)
     tag.user = user
     tag.save()
 
+def get_tags(user):
+    return Tag.objects.filter(user=user)
+
+def get_marketplaces():
+    return Marketplace.objects.all()
 
 def delete_tag(user, tag_id=None):
     tag = get_object_or_404(Tag, id=tag_id, user=user)
     tag.delete()
-
 
 def calc_whole_profit(deals_qs):
     return sum(deal.profit or Decimal('0') for deal in deals_qs)
@@ -97,4 +110,9 @@ def get_monthly_profit(user, date):
 
 def import_csv(user, csv_file):
     return ImporterForCsv(user).run(csv_file)
+
+def search_items(query):
+    item = Item.objects.filter(
+        name_on_market__contains=query,
+    ).values('id', 'name_on_market')[:20]
 

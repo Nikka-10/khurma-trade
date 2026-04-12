@@ -1,26 +1,30 @@
 <h2>Your Deals</h2>
 
 <p>
-  deals Profit:
+  Profit:
   <span style="color: {% if whole_profit >= 0 %}green{% else %}red{% endif %}">
     <strong>{{ whole_profit }}$</strong>
   </span>
 </p>
 
+{% if active_month %}
 <h3>
-  Monthly Result:
-  <span style="color: {% if monthly_profit > 0 %}green{% else %}red{% endif %}">
-    {{ monthly_profit }}
-  </span>
+    Monthly Result:
+    <span style="color: {% if monthly_profit > 0 %}green{% elif monthly_profit < 0 %}red{% else %}gray{% endif %}">
+        {{ monthly_profit }}$
+    </span>
 </h3>
+{% endif %}
 
-<form method="POST" action="{% url 'tradebook:delete_deal' %}">
-{% csrf_token %}
+<form method="POST" action="{% url 'tradebook:delete_deal' %}" id="bulk-delete-form">
+    {% csrf_token %}
+    <button class="btn-danger" type="submit">Delete selected</button>
+</form>
 
 <table class="deals-table">
     <thead>
         <tr>
-            <th><input type="checkbox" name="select_all"></th>
+            <th><input type="checkbox" onclick="toggleAll(this)"></th>
             <th>Item</th>
             <th>Buy</th>
             <th>Sell</th>
@@ -32,78 +36,107 @@
             <th>Sell site</th>
             <th>Status</th>
             <th>Notes</th>
-            <th>
-                <button style="background-color: #ac0000" type="submit">
-                    Delete Selected
-                </button>
-            </th>
+            <th>Actions</th>
         </tr>
     </thead>
 
     <tbody>
         {% for deal in deals %}
         <tr>
-
             <td>
-                <input type="checkbox" name="selected_deals" value="{{ deal.id }}">
+                <input type="checkbox" name="selected_deals" value="{{ deal.id }}" form="bulk-delete-form">
             </td>
 
             <td>{{ deal.item }}</td>
 
-            {# 🟥 BUY CELL #}
-            <td style="
-                {% if deal.sell_date and deal.is_cross_month %}
-                    background-color: #ffcccc;
-                {% endif %}
-            ">
-                {{ deal.purchase_price }}$
-            </td>
-
-            {# 🟩 SELL CELL #}
-            <td style="
-                {% if deal.sell_date and deal.is_cross_month %}
-                    background-color: #ccffcc;
-                {% endif %}
-            ">
-                {{ deal.sell_price|default:"not sold" }}$
-            </td>
+            <td>{{ deal.purchase_price }}$</td>
+            <td>{{ deal.sell_price|default:"—" }}{% if deal.sell_price %}${% endif %}</td>
 
             <td>{{ deal.purchase_date }}</td>
-            <td>{{ deal.sell_date }}</td>
+            <td>{{ deal.sell_date|default:"—" }}</td>
 
-            <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
-                {{ deal.profit }}$
+            <td class="{% if deal.profit > 0 %}profit-pos{% elif deal.profit < 0 %}profit-neg{% endif %}">
+                {% if deal.sell_price %}{{ deal.profit }}${% else %}—{% endif %}
             </td>
 
-            <td style="color: {% if deal.profit > 0 %}green{% else %}red{% endif %}">
-                {{ deal.profit_percent }}%
+            <td class="{% if deal.profit > 0 %}profit-pos{% elif deal.profit < 0 %}profit-neg{% endif %}">
+                {% if deal.sell_price %}{{ deal.profit_percent }}%{% else %}—{% endif %}
             </td>
 
             <td>{{ deal.buy_site }}</td>
-            <td>{{ deal.sell_site|default:"not sold" }}</td>
+            <td>{{ deal.sell_site|default:"—" }}</td>
 
             <td>{{ deal.status }}</td>
 
             <td>
-                <button type="button" onclick="toggleNotes({{ forloop.counter }})">
-                    Show
-                </button>
+                <button class="btn" type="button" onclick="toggleNotes({{ deal.id }})">Notes</button>
             </td>
 
             <td>
-                <button style="background-color: #ac0000"
-                        type="submit"
-                        name="delete_row"
-                        value="{{ deal.id }}">
-                    Delete
-                </button>
-            </td>
+                <button class="btn" type="button" onclick="toggleEdit({{ deal.id }})">Edit</button>
 
+                <form method="POST" action="{% url 'tradebook:delete_deal' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_row" value="{{ deal.id }}">
+                    <button class="btn-danger" type="submit">Delete</button>
+                </form>
+            </td>
         </tr>
 
-        <tr id="notes-{{ forloop.counter }}" class="hidden">
-            <td colspan="13">
+        <!-- NOTES -->
+        <tr id="notes-{{ deal.id }}" class="hidden">
+            <td colspan="13" class="notes-box">
                 {{ deal.notes|default:"No notes" }}
+            </td>
+        </tr>
+
+        <!-- EDIT -->
+        <tr id="edit-{{ deal.id }}" class="hidden">
+            <td colspan="13">
+                <form method="POST" action="{% url 'tradebook:edit_deal' deal.id %}" class="edit-form">
+                    {% csrf_token %}
+
+                    <div class="form-grid">
+                        <input type="text" name="item" value="{{ deal.item_id }}" placeholder="Item">
+
+                        <input type="number" step="0.01" name="purchase_price" value="{{ deal.purchase_price }}" placeholder="Buy">
+
+                        <input type="number" step="0.01" name="sell_price" value="{{ deal.sell_price }}" placeholder="Sell">
+
+                        <input type="date" name="purchase_date" value="{{ deal.purchase_date|date:'Y-m-d' }}">
+                        <input type="date" name="sell_date" value="{{ deal.sell_date|date:'Y-m-d' }}">
+
+                        <select name="purchase_marketplace">
+                            {% for m in marketplaces %}
+                                <option value="{{ m.id }}" {% if m.id == deal.purchase_marketplace_id %}selected{% endif %}>
+                                    {{ m.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <select name="sell_marketplace">
+                            <option value="">—</option>
+                            {% for m in marketplaces %}
+                                <option value="{{ m.id }}" {% if m.id == deal.sell_marketplace_id %}selected{% endif %}>
+                                    {{ m.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <select name="status">
+                            <option value="inventory" {% if deal.status == 'inventory' %}selected{% endif %}>Inventory</option>
+                            <option value="listed" {% if deal.status == 'listed' %}selected{% endif %}>Listed</option>
+                            <option value="sold" {% if deal.status == 'sold' %}selected{% endif %}>Sold</option>
+                        </select>
+
+                        <input type="text" name="notes" value="{{ deal.notes }}" placeholder="Notes">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn-success" type="submit">Save</button>
+                        <button class="btn" type="button" onclick="toggleEdit({{ deal.id }})">Cancel</button>
+                    </div>
+                </form>
             </td>
         </tr>
 
@@ -113,6 +146,17 @@
         </tr>
         {% endfor %}
     </tbody>
-</table>
+</table><script>
+function toggleEdit(id) {
+    document.getElementById("edit-" + id).classList.toggle("hidden");
+}
 
-</form>
+function toggleNotes(id) {
+    document.getElementById("notes-" + id).classList.toggle("hidden");
+}
+
+function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('input[name="selected_deals"]');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+</script>
