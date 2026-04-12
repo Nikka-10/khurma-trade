@@ -115,4 +115,5 @@ def search_items(query):
     item = Item.objects.filter(
         name_on_market__contains=query,
     ).values('id', 'name_on_market')[:20]
+    return item
 
