@@ -1,6 +1,7 @@
 from django import forms
 from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
+from items.models import Item
 from .models import TradeBook, Tag
 
 class TradeForm(forms.ModelForm):
@@ -36,7 +37,17 @@ class TradeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
+
+        # handle item queryset
+        if args and args[0] and args[0].get('item'):
+            self.fields['item'].queryset = Item.objects.filter(id=args[0].get('item'))
+        elif self.instance and self.instance.pk:
+            self.fields['item'].queryset = Item.objects.filter(id=self.instance.item_id)
+        else:
+            self.fields['item'].queryset = Item.objects.none()
+
+        self.fields['item'].widget = forms.HiddenInput()
+
         if self.user:
             self.fields['tags'].queryset = Tag.objects.filter(user=self.user)
         else:
@@ -68,46 +79,32 @@ class TradeForm(forms.ModelForm):
         if len(notes) > 5000:
             raise ValidationError("Notes are too long (max 5000 characters).")
         return notes
-    
+
     def clean(self):
         cleaned_data = super().clean()
-        
+
         purchase_price = cleaned_data.get('purchase_price')
         sell_price = cleaned_data.get('sell_price')
         purchase_date = cleaned_data.get('purchase_date')
         sell_date = cleaned_data.get('sell_date')
-        purchase_mplace = cleaned_data.get('purchase_marketplace')
         sell_mplace = cleaned_data.get('sell_marketplace')
         sell_custom = cleaned_data.get('sell_marketplace_custom')
-        purchase_custom = cleaned_data.get('purchase_marketplace_custom')
         status = cleaned_data.get('status')
 
-
         if purchase_date and sell_date and sell_date < purchase_date:
-            self.add_error('sell_date', "Sell date cannot be earlier than purchase date.")
+            self.add_error('sell_date', 'Sell date cannot be earlier than purchase date.')
 
-        if purchase_price and purchase_price <= 0:
-            self.add_error('purchase_price', "Purchase price must be greater than zero.")
-
-        if sell_price and sell_price <= 0:
-            self.add_error('sell_price', "Purchase price must be greater than zero.")
-
-        if purchase_date and sell_date:
-            if not sell_price: self.add_error('sell price', "you forget sell price")
-
-        if purchase_date and sell_date and purchase_price and sell_price: status='sold'
+        if purchase_date and sell_date and purchase_price and sell_price:
+            status = 'sold'
+            cleaned_data['status'] = status
 
         if status == 'sold':
-            missing = []
             if not sell_date:
-                missing.append('sell_date')
+                self.add_error('sell_date', 'Required when status is sold.')
             if not sell_price:
-                missing.append('sell_price')
-            if not purchase_mplace and not purchase_custom:
-                missing.append('sell_marketplace')
-                
-            if missing:
-                self.add_error(None, f"When status is 'sold', please fill: {', '.join(missing)}")
+                self.add_error('sell_price', 'Required when status is sold.')
+            if not sell_mplace and not sell_custom:
+                self.add_error('sell_marketplace', 'Required when status is sold.')
 
         return cleaned_data
 

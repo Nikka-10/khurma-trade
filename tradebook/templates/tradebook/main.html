@@ -130,6 +130,18 @@
     <div id="formContainer" class="hidden">
         <form method="POST" action="{% url 'tradebook:create_deal' %}">
             {% csrf_token %}
+            <input
+                type="text"
+                id="item-search"
+                placeholder="Search item..."
+                autocomplete="off"
+                hx-get="{% url 'tradebook:search_items' %}"
+                hx-trigger="keyup changed delay:300ms"
+                hx-target="#item-results"
+                name="query"
+                value="{{ form.instance.item.name_on_market|default:'' }}"
+            >
+            <div id="item-results"></div>
             {{ form }}
             {{ form.errors }}
             <button type="submit">Save Deal</button>
@@ -170,6 +182,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+function selectItem(id, name) {
+    document.getElementById('id_item').value = id;
+    document.getElementById('item-search').value = name;
+    document.getElementById('item-results').innerHTML = '';
+}
+
 </script>
 
 </body>

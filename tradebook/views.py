@@ -26,6 +26,7 @@ def tradebook_view(request):
             'deals': deals,
             "whole_profit": whole_profit,
             "monthly_profit": monthly_profit,
+            'active_month': date,
             "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
             'marketplaces': services.get_marketplaces()
         })
@@ -60,12 +61,14 @@ def render_main(request, extra_context=None):
 
 @login_required
 def create_deal(request):
+    print(request.POST)
     if request.method == 'POST':
         form = TradeForm(request.POST, user=request.user)
         if form.is_valid():
             services.create_deal(request.user, form)
             return redirect('tradebook:tradebook')
         else:
+            print("problme with validatoin")
             return render_main(request, extra_context={'form': form})
 
 @login_required
@@ -132,6 +135,6 @@ def search_items(request):
     query = request.GET.get('query', '').strip()
     if len(query) < 2:
         return render(request, 'tradebook/partials/item_results.html', {'items': []})
-    items = services.search_item(query)
+    items = services.search_items(query)
     return render(request, 'tradebook/partials/item_results.html', {'items': items})
 
