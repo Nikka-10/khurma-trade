@@ -9,5 +9,7 @@ urlpatterns=[
     path('delete_deal', views.delete_deal, name="delete_deal"),
     path('create_tag', views.create_tag, name="create_tag"),
     path('delete_tag', views.delete_tag, name="delete_tag"),
+    path('edit_deal/<int:deal_id>/', views.edit_deal, name="edit_deal"),
     path('upload_csv', views.upload_csv, name="upload_csv"),
+    path('search_items/', views.search_items, name="search_items"),
 ]

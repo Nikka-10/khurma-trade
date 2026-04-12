@@ -20,7 +20,7 @@ class Item(models.Model):
     name_on_market = models.CharField(max_length=255, unique=True)
     quality = models.CharField(max_length=50, null=True)
     source_game = models.CharField(max_length=30, choices=Game)
-    image = models.ImageField(upload_to='item_images/', null=True)
+    image = models.ImageField(upload_to='item_images/', null=True, blank=True)
     
     usage_count = models.PositiveIntegerField(default=0, editable=False)
         
