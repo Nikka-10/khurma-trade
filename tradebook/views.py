@@ -121,7 +121,7 @@ def delete_tag(request):
 @login_required
 def upload_csv(request):
     if request.method == 'POST':
-        csv_file = request.FILES['csv_file']
+        csv_file = request.FILES.get('csv_file')
         if not csv_file:
             return redirect('tradebook:tradebook')
         result = services.import_csv(request.user, csv_file)

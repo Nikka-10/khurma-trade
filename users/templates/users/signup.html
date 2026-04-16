@@ -13,13 +13,7 @@
             <h2>Create Account</h2>
             {% csrf_token %}
 
-            <input type="text" name="username" placeholder="Username" required><br>
-
-            <input type="email" name="email" placeholder="Email" required><br>
-
-            <input type="password" name="password" placeholder="Password" required><br>
-
-            <input type="password" name="confirm_password" placeholder="Confirm Password" required><br>
+            {{ form }}
 
             <button type="submit">Sign Up</button>
     </form>
