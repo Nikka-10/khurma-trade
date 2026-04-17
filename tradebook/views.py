@@ -8,7 +8,9 @@ from .forms import TradeForm, CreateTagForm
 from django.db.models.functions import TruncMonth
 from . import services
 
-@login_required
+
+login_url = '/login'
+@login_required(login_url=login_url)
 def tradebook_view(request):
     tag_id = request.GET.get('tag')
     date = request.GET.get('date')
@@ -45,7 +47,7 @@ def tradebook_view(request):
         'marketplaces': services.get_marketplaces()
     })
 
-@login_required
+@login_required(login_url=login_url)
 def render_main(request, extra_context=None):
     context = {
         'form': TradeForm(user=request.user),
@@ -59,7 +61,7 @@ def render_main(request, extra_context=None):
         context.update(extra_context)
     return render(request, 'tradebook/main.html', context)
 
-@login_required
+@login_required(login_url=login_url)
 def create_deal(request):
     print(request.POST)
     if request.method == 'POST':
@@ -71,7 +73,7 @@ def create_deal(request):
             print("problme with validatoin")
             return render_main(request, extra_context={'form': form})
 
-@login_required
+@login_required(login_url=login_url)
 def delete_deal(request):
     if request.method == 'POST':
 
@@ -85,7 +87,7 @@ def delete_deal(request):
     else:
         return render_main(request)
 
-@login_required
+@login_required(login_url=login_url)
 def edit_deal(request, deal_id):
     deal = get_object_or_404(TradeBook, id=deal_id, user=request.user)
     if request.method == 'POST':
@@ -98,7 +100,7 @@ def edit_deal(request, deal_id):
         return render_main(request, {'form': form})
 
 
-@login_required
+@login_required(login_url=login_url)
 def create_tag(request):
     if request.method == 'POST':
         tag_form = CreateTagForm(request.POST, user=request.user)
@@ -109,7 +111,7 @@ def create_tag(request):
             return render_main(request, {'tag_form': tag_form})
 
 
-@login_required
+@login_required(login_url=login_url)
 def delete_tag(request):
     if request.method == 'POST':
         services.delete_tag(request.user, request.POST.get('tag'))
@@ -118,7 +120,7 @@ def delete_tag(request):
        return render_main(request)
 
 
-@login_required
+@login_required(login_url=login_url)
 def upload_csv(request):
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
@@ -130,7 +132,7 @@ def upload_csv(request):
     return redirect('tradebook:tradebook')
 
 
-@login_required
+@login_required(login_url=login_url)
 def search_items(request):
     query = request.GET.get('query', '').strip()
     if len(query) < 2:

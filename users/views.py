@@ -1,8 +1,10 @@
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.shortcuts import render, redirect
 from .forms import UserSignUpForm, UserLoginForm
+from django.contrib.auth.decorators import login_required
 
 
+login_url = '/login'
 def signup_page(request):
     if request.method == 'POST':
         form = UserSignUpForm(request.POST)
@@ -24,3 +26,8 @@ def login_page(request):
     form = UserLoginForm()
     return render(request, "users/login.html", {"form":form})
 
+
+@login_required(login_url=login_url)
+def log_out(request):
+    logout(request)
+    return redirect("users:signup")
