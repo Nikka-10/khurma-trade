@@ -43,13 +43,16 @@ class ItemListing(models.Model):
 
     last_checked_at = models.DateTimeField(null=True, blank=True, auto_now=True)
     price_changed_at = models.DateTimeField(null=True, blank=True)
+    next_scrape_at = models.DateTimeField(null=True, blank=True)
+    scrape_priority = models.IntegerField(default=0)
     
     class Meta:
         unique_together = ('item', 'marketplace')
         indexes = [
             models.Index(fields=['item', 'marketplace']),   
             models.Index(fields=['current_price']),
-            models.Index(fields=['last_checked_at']),   
+            models.Index(fields=['last_checked_at']),
+            models.Index(fields=['scrape_priority', 'next_scrape_at']),
         ]
          
     @property
