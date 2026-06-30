@@ -16,14 +16,21 @@ class SkinportScraper(BaseScraper):
     def get_prices_bulk(self, item_names: list[str]) -> list[ScrapeResult]:
         try:
             response = requests.get(
-                f'{self.BASE_URL}/items',
+                f"{self.BASE_URL}/items",
                 params={
-                    'app_id': 730,      # 730 = CS2
-                    'currency': self.CURRENCY,
+                    "app_id": 730,
+                    "currency": self.CURRENCY,
+                },
+                headers={
+                    "Accept-Encoding": "br",
+                    "User-Agent": "KhurmaTrade/1.0",
                 },
                 timeout=30,
             )
             response.raise_for_status()
+            print("Status:", response.status_code)
+            print("Content-Type:", response.headers.get("Content-Type"))
+            print("Text:", repr(response.text[:500]))
             data = response.json()
 
         except requests.Timeout:
@@ -68,7 +75,7 @@ class SkinportScraper(BaseScraper):
                 item_name=name,
                 price=Decimal(str(min_price / 100)),  # convert cents to dollars
                 currency=self.CURRENCY,
-                url=f'https://skinport.com/item/{item_data["url"]}',
+                url=item_data.get("item_page", ""),
             ))
 
         return results

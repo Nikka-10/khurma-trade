@@ -1,4 +1,3 @@
-# scraper/registry.py
 import importlib
 import pkgutil
 import scrappers

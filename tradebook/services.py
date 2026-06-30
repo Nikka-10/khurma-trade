@@ -70,13 +70,19 @@ def calc_whole_profit(deals_qs):
     return sum(deal.profit or Decimal('0') for deal in deals_qs)
 
 def get_months(user):
-    months_qs = (TradeBook.objects
-        .filter(user=user)
+    purchase_months = (TradeBook.objects
+        .filter(user=user, purchase_date__isnull=False)
         .annotate(month=TruncMonth('purchase_date'))
         .values('month')
-        .distinct()
-        .order_by('-month'))
-    return months_qs
+        .distinct())
+
+    sell_months = (TradeBook.objects
+        .filter(user=user, sell_date__isnull=False)
+        .annotate(month=TruncMonth('sell_date'))
+        .values('month')
+        .distinct())
+
+    return purchase_months.union(sell_months).order_by('-month')
 
 
 def get_monthly_profit(user, date):
@@ -106,7 +112,7 @@ def get_monthly_profit(user, date):
         .aggregate(total=Sum('net_received'))
     )['total'] or Decimal('0')
 
-    return get_money - spend_money
+    return round(get_money - spend_money, 2)
 
 def import_csv(user, csv_file):
     return ImporterForCsv(user).run(csv_file)
