@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="{% static 'tracking/style.css' %}">
+    <title>Item Tracking</title>
+</head>
+<body>
+<div class="container">
+
+    <h1>📈 Item Tracking</h1>
+    <a class="back-link" href="{% url 'tradebook:tradebook' %}">← Back to Tradebook</a>
+
+    {# MARKETPLACE FILTERS #}
+    <div class="marketplace-filters" id="marketplace-filters">
+        <h3>Filter by marketplace</h3>
+        {% for m in marketplaces %}
+        <label>
+            <input
+                type="checkbox"
+                name="marketplaces"
+                value="{{ m.id }}"
+                {% if m.id|stringformat:"s" in selected_marketplace_ids %}checked{% endif %}
+            >
+            {{ m.name }} ({{ m.fee_percent }}%)
+        </label>
+        {% endfor %}
+    </div>
+
+    {# SEARCH BAR #}
+    <div class="search-section">
+        {% include 'items/partials/search_bar.html' with search_url="/tracking/search/" qualities=qualities %}
+    </div>
+
+    {# ITEM DETAIL — loads here after clicking a search result #}
+    <div id="item-detail"></div>
+
+    {# TRACKED ITEMS TABLE #}
+    <div id="tracking-content">
+        {% include 'tracking/partials/tracking_table.html' %}
+    </div>
+
+</div>
+
+<script>
+function selectItem(id, name) {
+    document.getElementById('item-search').value = name;
+    document.getElementById('item-results').innerHTML = '';
+
+    const marketplaceIds = [...document.querySelectorAll('input[name="marketplaces"]:checked')]
+        .map(cb => `marketplaces=${cb.value}`)
+        .join('&');
+
+    htmx.ajax('GET', `/tracking/item/${id}/?${marketplaceIds}`, {
+        target: '#item-detail',
+        swap: 'innerHTML'
+    });
+}
+
+function toggleAlerts(id) {
+    document.getElementById('alerts-' + id).classList.toggle('hidden');
+}
+</script>
+</body>
+</html>

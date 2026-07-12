@@ -1,0 +1,77 @@
+{% if tracked %}
+<h3 style="margin-top: 24px;">Your tracked items</h3>
+<table class="tracking-table">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Game</th>
+            <th>Quality</th>
+            {% for m in selected_marketplaces %}
+            <th>{{ m.name }}</th>
+            {% endfor %}
+            <th>Alert min</th>
+            <th>Alert max</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in tracked %}
+        <tr>
+            <td>{{ t.item.name_on_market }}</td>
+            <td>{{ t.item.source_game }}</td>
+            <td>{{ t.item.quality|default:"—" }}</td>
+
+            {% for ml in t.marketplace_listings %}
+            <td>
+                {% if ml.listing and ml.listing.current_price %}
+                    {{ ml.listing.current_price }}$
+                    <div class="net-price">{{ ml.listing.net_price }}$ net</div>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            {% endfor %}
+
+            <td>{{ t.alert_min|default:"—" }}</td>
+            <td>{{ t.alert_max|default:"—" }}</td>
+
+            <td>
+                <button class="btn" type="button" onclick="toggleAlerts({{ t.id }})">Alerts</button>
+                <form method="POST" action="{% url 'tracking:remove_tracking' t.item.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="btn-danger" type="submit">Remove</button>
+                </form>
+            </td>
+        </tr>
+
+        <tr id="alerts-{{ t.id }}" class="hidden alerts-row">
+            <td colspan="{{ selected_marketplaces|length|add:6 }}">
+                <form method="POST" action="{% url 'tracking:track_item' t.item.id %}" class="alerts-form">
+                    {% csrf_token %}
+                    {% for m in t.marketplaces.all %}
+                        <input type="hidden" name="marketplaces" value="{{ m.id }}">
+                    {% endfor %}
+                    <label>Min price:
+                        <input type="number" step="0.01" name="alert_min" value="{{ t.alert_min|default:'' }}" placeholder="e.g. 50.00">
+                    </label>
+                    <label>Max price:
+                        <input type="number" step="0.01" name="alert_max" value="{{ t.alert_max|default:'' }}" placeholder="e.g. 200.00">
+                    </label>
+                    <label>
+                        <input type="checkbox" name="notify_telegram" {% if t.notify_telegram %}checked{% endif %}>
+                        Telegram
+                    </label>
+                    <button class="btn-success" type="submit">Save</button>
+                    <button class="btn" type="button" onclick="toggleAlerts({{ t.id }})">Cancel</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No tracked items yet.</p>
+    <p>Search for an item above and click <strong>+ Add to tracking</strong>.</p>
+</div>
+{% endif %}

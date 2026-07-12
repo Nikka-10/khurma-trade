@@ -48,16 +48,17 @@ INSTALLED_APPS = [
     'items',
     'tradebook',
     'subscriptions',
+    'tracking',
     
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'allauth.socialaccount.providers.openid',
+    #'allauth.socialaccount.providers.openid',
 
     'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.telegram',
-    'allauth.socialaccount.providers.steam',
+    #'allauth.socialaccount.providers.telegram',
+    #'allauth.socialaccount.providers.steam',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

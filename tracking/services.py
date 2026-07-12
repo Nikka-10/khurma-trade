@@ -1,28 +1,46 @@
-# scraper/services.py
 from django.utils import timezone
 from django.db import transaction
-from items.models import ItemListing
+from datetime import timedelta
+from items.models import Item ,ItemListing, Marketplace
 from scraper.register_scrapper import registry
-from scraper.config import SCRAPE_INTERVALS, PRIORITY_LEVELS, BATCH_SIZE
 
 
-def scrape_due_listings():
+
+def item_prices(item, selected_marketplace_ids=None):
+    STALE_AFTER = timedelta(hours=1)
     now = timezone.now()
 
-    listings = (ItemListing.objects
-        .filter(
-            scrape_priority__gt=PRIORITY_LEVELS['none'],
-            next_scrape_at__lte=now,
-        )
-        .select_related('item', 'marketplace')
-        .order_by('-scrape_priority')[:BATCH_SIZE])
+    listings = ItemListing.objects.filter(item=item).select_related('marketplace')
 
+    if selected_marketplace_ids:
+        listings = listings.filter(marketplace_id__in=selected_marketplace_ids)
+
+    fresh = [] # not using currently
+    stale = []
+    for listing in listings:
+        if listing.last_checked_at and now - listing.last_checked_at < STALE_AFTER:
+            fresh.append(listing)
+        else:
+            stale.append(listing)
+
+    if stale:
+        _scrape_listings(stale, now)
+
+        listings = ItemListing.objects.filter(item=item).select_related('marketplace')
+        if selected_marketplace_ids:
+            listings = listings.filter(marketplace_id__in=selected_marketplace_ids)
+
+    return listings
+
+
+def _scrape_listings(listings, now):
+    print(f"Available scrapers: {registry.available}") #temporar
     by_marketplace = {}
+
     for listing in listings:
         name = listing.marketplace.name.lower()
         by_marketplace.setdefault(name, []).append(listing)
 
-    updated_count = 0
     for marketplace_name, marketplace_listings in by_marketplace.items():
         scraper = registry.get(marketplace_name)
         if not scraper:
@@ -37,25 +55,12 @@ def scrape_due_listings():
                 result = result_map.get(listing.item.name_on_market)
                 if not result or not result.success:
                     continue
-
                 price_changed = listing.current_price != result.price
                 listing.current_price = result.price
                 if result.url:
                     listing.url = result.url
                 if price_changed:
                     listing.price_changed_at = now
-
-                interval = _get_interval(listing.scrape_priority)
-                listing.next_scrape_at = now + interval
+                listing.next_scrape_at = now + timedelta(hours=1)
                 listing.save()
-                updated_count += 1
 
-    return updated_count
-
-
-def _get_interval(priority):
-    if priority >= PRIORITY_LEVELS['high']:
-        return SCRAPE_INTERVALS['high']
-    elif priority >= PRIORITY_LEVELS['medium']:
-        return SCRAPE_INTERVALS['medium']
-    return SCRAPE_INTERVALS['low']

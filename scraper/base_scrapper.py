@@ -1,4 +1,3 @@
-# scraper/base.py
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from dataclasses import dataclass

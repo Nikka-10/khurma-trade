@@ -1,0 +1,55 @@
+<div class="item-detail-card">
+    <h3>{{ item.name_on_market }}
+        {% if is_tracked %}<span class="tracked-badge">✓ Tracking</span>{% endif %}
+    </h3>
+    <p class="item-meta">{{ item.source_game }} — {{ item.quality|default:"—" }}</p>
+
+    <table class="prices-table">
+        <thead>
+            <tr>
+                <th>Marketplace</th>
+                <th>Price</th>
+                <th>Fee</th>
+                <th>Net price</th>
+                <th>Link</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for listing in listings %}
+            {% if listing.current_price %}
+            <tr>
+                <td>{{ listing.marketplace.name }}</td>
+                <td>{{ listing.current_price }}$</td>
+                <td>{{ listing.fee_amount }}$</td>
+                <td><strong>{{ listing.net_price }}$</strong></td>
+                <td><a href="{{ listing.url }}" target="_blank">View →</a></td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-state">No prices available yet</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 12px;">
+        {% if is_tracked %}
+            <form method="POST" action="{% url 'tracking:remove_tracking' item.id %}">
+                {% csrf_token %}
+                <button class="btn-danger" type="submit">Remove from tracking</button>
+            </form>
+        {% else %}
+            <form method="POST" action="{% url 'tracking:track_item' item.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="marketplaces" id="track-marketplace-ids">
+                <button class="btn-track" type="submit" onclick="
+                    document.getElementById('track-marketplace-ids').value =
+                    [...document.querySelectorAll('input[name=marketplaces]:checked')].map(cb => cb.value).join(',')
+                ">
+                    + Add to tracking
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
