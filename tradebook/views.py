@@ -7,6 +7,7 @@ from users.models import User
 from .forms import TradeForm, CreateTagForm
 from django.db.models.functions import TruncMonth
 from . import services
+from items import services as item_services
 
 
 login_url = '/login'
@@ -30,7 +31,7 @@ def tradebook_view(request):
             "monthly_profit": monthly_profit,
             'active_month': date,
             "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
-            'marketplaces': services.get_marketplaces()
+            'marketplaces': item_services.get_marketplaces()
         })
 
     form = TradeForm(user=request.user)
@@ -44,22 +45,26 @@ def tradebook_view(request):
         "months": months,
         "whole_profit": whole_profit,
         "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
-        'marketplaces': services.get_marketplaces()
+        'marketplaces': item_services.get_marketplaces()
     })
+
 
 @login_required(login_url=login_url)
 def render_main(request, extra_context=None):
+    from items.services import get_qualities
     context = {
         'form': TradeForm(user=request.user),
-        'deals': services.get_deals(request.user),
         'tag_form': CreateTagForm(),
+        'deals': services.get_deals(request.user),
         'tags': services.get_tags(request.user),
         'months': services.get_months(request.user),
-        'marketplaces': services.get_marketplaces()
+        'marketplaces': item_services.get_marketplaces(),
+        'qualities': get_qualities(),  # ← add
     }
     if extra_context:
         context.update(extra_context)
     return render(request, 'tradebook/main.html', context)
+
 
 @login_required(login_url=login_url)
 def create_deal(request):
@@ -72,6 +77,7 @@ def create_deal(request):
         else:
             print("problme with validatoin")
             return render_main(request, extra_context={'form': form})
+
 
 @login_required(login_url=login_url)
 def delete_deal(request):
@@ -86,6 +92,7 @@ def delete_deal(request):
         return redirect('tradebook:tradebook')
     else:
         return render_main(request)
+
 
 @login_required(login_url=login_url)
 def edit_deal(request, deal_id):
@@ -134,9 +141,11 @@ def upload_csv(request):
 
 @login_required(login_url=login_url)
 def search_items(request):
-    query = request.GET.get('query', '').strip()
-    if len(query) < 2:
-        return render(request, 'tradebook/partials/item_results.html', {'items': []})
-    items = services.search_items(query)
-    return render(request, 'tradebook/partials/item_results.html', {'items': items})
+    query = request.GET.get('q', '').strip()
+    game = request.GET.get('game', '').strip()
+    quality = request.GET.get('quality', '').strip()
+
+    items = item_services.search_items( query, game=game or None, quality=quality or None)
+
+    return render(request, 'items/partials/item_results.html', {'items': items})
 

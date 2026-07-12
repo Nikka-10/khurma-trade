@@ -1,0 +1,15 @@
+{% for item in items %}
+<div
+    style="padding: 6px 10px; cursor: pointer;"
+    onclick="selectItem({{ item.id }}, '{{ item.name_on_market }}')">
+    {{ item.name_on_market }}
+    {% if item.quality %}
+        <span style="color: gray; font-size: 12px;">{{ item.quality }}</span>
+    {% endif %}
+    <span style="color: gray; font-size: 11px;">{{ item.source_game }}</span>
+</div>
+{% empty %}
+{% if request.GET.q %}
+<div style="padding: 6px 10px; color: gray;">No items found</div>
+{% endif %}
+{% endfor %}

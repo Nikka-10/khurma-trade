@@ -1,0 +1,30 @@
+<div id="search-filters">
+    <select name="game">
+        <option value="">All games</option>
+        <option value="CS2" {% if selected_game == 'CS2' %}selected{% endif %}>CS2</option>
+        <option value="RUST" {% if selected_game == 'RUST' %}selected{% endif %}>Rust</option>
+    </select>
+
+    <select name="quality">
+        <option value="">All qualities</option>
+        {% for q in qualities %}
+            <option value="{{ q }}" {% if selected_quality == q %}selected{% endif %}>{{ q }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<input
+    type="text"
+    id="item-search"
+    placeholder="Search item..."
+    autocomplete="off"
+    hx-get="{{ search_url }}"
+    hx-trigger="keyup changed delay:300ms"
+    hx-target="#item-results"
+    hx-include="#search-filters"
+    name="q"
+    value="{{ search_value|default:'' }}"
+>
+
+
+<div id="item-results"></div>

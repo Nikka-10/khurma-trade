@@ -39,6 +39,7 @@ class ItemListing(models.Model):
     marketplace = models.ForeignKey(Marketplace, on_delete=models.CASCADE)
     current_price = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     currency = models.CharField(max_length=3, default='USD')
+    fee_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True,blank=True )
     url = models.URLField(max_length=500)
 
     last_checked_at = models.DateTimeField(null=True, blank=True, auto_now=True)
@@ -54,10 +55,11 @@ class ItemListing(models.Model):
             models.Index(fields=['last_checked_at']),
             models.Index(fields=['scrape_priority', 'next_scrape_at']),
         ]
-         
+
     @property
     def fee_amount(self) -> Decimal:
-        return self.current_price * (self.marketplace.fee_percent/100)
+        fee = self.fee_percent if self.fee_percent is not None else self.marketplace.fee_percent
+        return self.current_price * (fee / 100)
     
     @property
     def net_price(self) -> Decimal:

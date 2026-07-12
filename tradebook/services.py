@@ -5,7 +5,7 @@ from .models import TradeBook, Tag
 from decimal import Decimal
 from .importers.import_csv import ImporterForCsv
 from items.models import Marketplace
-from items.models import Item
+from items.models import Item, Game
 
 
 def get_deals(user, tag_id=None, date=None):
@@ -56,11 +56,9 @@ def create_tag(user, form):
     tag.user = user
     tag.save()
 
+
 def get_tags(user):
     return Tag.objects.filter(user=user)
-
-def get_marketplaces():
-    return Marketplace.objects.all()
 
 def delete_tag(user, tag_id=None):
     tag = get_object_or_404(Tag, id=tag_id, user=user)
@@ -114,12 +112,9 @@ def get_monthly_profit(user, date):
 
     return round(get_money - spend_money, 2)
 
+
 def import_csv(user, csv_file):
     return ImporterForCsv(user).run(csv_file)
 
-def search_items(query):
-    item = Item.objects.filter(
-        name_on_market__contains=query,
-    ).values('id', 'name_on_market')[:20]
-    return item
+
 

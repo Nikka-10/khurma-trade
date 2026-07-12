@@ -131,17 +131,7 @@
     <div id="formContainer" class="hidden">
         <form method="POST" action="{% url 'tradebook:create_deal' %}">
             {% csrf_token %}
-            <input
-                type="text"
-                id="item-search"
-                placeholder="Search item..."
-                autocomplete="off"
-                hx-get="{% url 'tradebook:search_items' %}"
-                hx-trigger="keyup changed delay:300ms"
-                hx-target="#item-results"
-                name="query"
-                value="{{ form.instance.item.name_on_market|default:'' }}"
-            >
+            {% include 'items/partials/search_bar.html' with search_url="/trade/search_items/" %}
             <div id="item-results"></div>
             {{ form }}
             {{ form.errors }}

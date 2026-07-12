@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 SCRAPE_INTERVALS = {
-    'high':   timedelta(minutes=5),   # items in active price alerts
-    'medium': timedelta(minutes=30),  # items in tradebooks
+    'high':   timedelta(minutes=10),   # items in active price alerts
+    'medium': timedelta(minutes=60),  # items in tradebooks
     'low':    timedelta(hours=24),     # nothing else for now
 }
 
