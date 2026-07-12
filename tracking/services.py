@@ -3,6 +3,7 @@ from django.db import transaction
 from datetime import timedelta
 from items.models import Item ,ItemListing, Marketplace
 from scraper.register_scrapper import registry
+from .models import TrackedItem
 
 
 
@@ -34,7 +35,6 @@ def item_prices(item, selected_marketplace_ids=None):
 
 
 def _scrape_listings(listings, now):
-    print(f"Available scrapers: {registry.available}") #temporar
     by_marketplace = {}
 
     for listing in listings:
@@ -64,3 +64,24 @@ def _scrape_listings(listings, now):
                 listing.next_scrape_at = now + timedelta(hours=1)
                 listing.save()
 
+
+def get_tracked_items(user_id):
+    return (TrackedItem.objects
+     .filter(user=user_id)
+     .select_related('item')
+     .prefetch_related('marketplaces'))
+
+
+def add_tracked_items(user_id, item, alert_min, alert_max):
+    tracked, created = TrackedItem.objects.get_or_create(
+        user=user_id,
+        item=item,
+        defaults={
+            'alert_min': alert_min,
+            'alert_max': alert_max,
+        })
+    return tracked, created
+
+
+def remove_tracked_items(user_id, item_id):
+    TrackedItem.objects.filter(user=user_id, item_id=item_id).delete()
