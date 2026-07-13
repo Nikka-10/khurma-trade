@@ -148,4 +148,3 @@ def search_items(request):
     items = item_services.search_items( query, game=game or None, quality=quality or None)
 
     return render(request, 'items/partials/item_results.html', {'items': items})
-

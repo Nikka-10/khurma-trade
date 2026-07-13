@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'tradebook',
     'subscriptions',
     'tracking',
+    'notification',
     
     'django.contrib.sites',
     'allauth',
