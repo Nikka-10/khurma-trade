@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.db import transaction
 from datetime import timedelta
 from items.models import Item ,ItemListing, Marketplace
-from scraper.register_scrapper import registry
+from scraper.registry import registry
 from .models import TrackedItem
 
 

@@ -15,6 +15,7 @@ def signup_page(request):
     form = UserSignUpForm()
     return render(request, "users/signup.html", {'form':form})
 
+
 def login_page(request):
     if request.method == 'POST':
         form = UserLoginForm(request, data=request.POST)

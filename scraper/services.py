@@ -2,7 +2,7 @@
 from django.utils import timezone
 from django.db import transaction
 from items.models import ItemListing
-from scraper.register_scrapper import registry
+from scraper.registry import registry
 from scraper.config import SCRAPE_INTERVALS, PRIORITY_LEVELS, BATCH_SIZE
 
 
