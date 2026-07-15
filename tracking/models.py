@@ -4,7 +4,7 @@ from users.models import User
 
 
 class TrackedItem(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name='tracked_items')
+    user = models.ForeignKey(User, on_delete=models.CASCADE,  related_name='tracked_items') 
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     marketplaces = models.ManyToManyField(Marketplace, blank=True)
 

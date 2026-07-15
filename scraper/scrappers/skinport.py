@@ -1,7 +1,7 @@
 # scrappers/skinport.py
 import requests
 from decimal import Decimal
-from scraper.base_scrapper import BaseScraper, ScrapeResult
+from scraper.base import BaseScraper, ScrapeResult
 
 
 class SkinportScraper(BaseScraper):

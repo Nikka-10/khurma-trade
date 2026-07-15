@@ -1,7 +1,7 @@
 import importlib
 import pkgutil
-import scrappers
-from scraper.base_scrapper import BaseScraper
+from . import scrappers
+from .base import BaseScraper
 
 
 class ScraperRegistry:
@@ -11,7 +11,7 @@ class ScraperRegistry:
 
     def _discover(self):
         for _, module_name, _ in pkgutil.iter_modules(scrappers.__path__):
-            module = importlib.import_module(f'scrappers.{module_name}')
+            module = importlib.import_module(f"scraper.scrappers.{module_name}")
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if (isinstance(attr, type)
