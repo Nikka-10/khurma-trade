@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'items',
     'tradebook',
     'subscriptions',
+    'scraper',
     'tracking',
     'notification',
     
@@ -163,3 +164,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'update-prices': {
+        'task': 'scraper.tasks.update_prices',
+        'schedule': crontab(minute='*'),
+    },
+    'check-alerts': {
+        'task': 'notification.tasks.check_alerts',
+        'schedule': crontab(minute='*'),
+    },
+}

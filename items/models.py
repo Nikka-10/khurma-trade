@@ -58,11 +58,15 @@ class ItemListing(models.Model):
 
     @property
     def fee_amount(self) -> Decimal:
+        if self.current_price is None:
+            return Decimal('0.00')
         fee = self.fee_percent if self.fee_percent is not None else self.marketplace.fee_percent
-        return self.current_price * (fee / 100)
-    
+        return self.current_price * (fee / Decimal('100'))
+
     @property
     def net_price(self) -> Decimal:
+        if self.current_price is None:
+            return Decimal('0.00')
         return self.current_price - self.fee_amount
          
 

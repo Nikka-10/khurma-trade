@@ -2,8 +2,8 @@ from datetime import timedelta
 
 SCRAPE_INTERVALS = {
     'high':   timedelta(minutes=10),   # items in active price alerts
-    'medium': timedelta(minutes=60),  # items in tradebooks
-    'low':    timedelta(hours=24),     # nothing else for now
+    'medium': timedelta(hours=24),  # items in tradebooks
+    'low':    timedelta(days=7),     # nothing else for now
 }
 
 PRIORITY_LEVELS = {
@@ -13,4 +13,4 @@ PRIORITY_LEVELS = {
     'none': 0,
 }
 
-BATCH_SIZE = 100  # how many listings to scrape per task run
+BATCH_SIZE = 1000  # how many listings to scrape per task run

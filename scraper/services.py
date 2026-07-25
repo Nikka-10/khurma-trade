@@ -1,9 +1,35 @@
-# scraper/services.py
 from django.utils import timezone
 from django.db import transaction
 from items.models import ItemListing
 from scraper.registry import registry
 from scraper.config import SCRAPE_INTERVALS, PRIORITY_LEVELS, BATCH_SIZE
+from django.db.models import Exists, OuterRef
+from tradebook.models import TradeBook
+from tracking.models import TrackedItem
+
+
+
+def recalculate_priorities():
+    now = timezone.now()
+
+    in_tracking = TrackedItem.objects.filter(item=OuterRef('item'))
+    in_tradebook = TradeBook.objects.filter(item=OuterRef('item'))
+
+    ItemListing.objects.filter(Exists(in_tracking)).update(
+        scrape_priority=PRIORITY_LEVELS['high'],
+        next_scrape_at=now
+    )
+    ItemListing.objects.filter(
+        Exists(in_tradebook)
+    ).exclude(Exists(in_tracking)).update(
+        scrape_priority=PRIORITY_LEVELS['medium'],
+        next_scrape_at=now
+    )
+    ItemListing.objects.exclude(
+        Exists(in_tradebook)
+    ).exclude(
+        Exists(in_tracking)
+    ).update(scrape_priority=PRIORITY_LEVELS['none'])
 
 
 def scrape_due_listings():
