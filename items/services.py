@@ -15,7 +15,12 @@ def search_items(query, game=None, quality=None):
     return qs.values('id', 'name_on_market', 'quality', 'source_game')[:20]
 
 def get_qualities():
-    return Item.objects.values_list('quality', flat=True).distinct().order_by('quality')
+    return (Item.objects
+        .exclude(quality__isnull=True)
+        .exclude(quality='')
+        .values_list('quality', flat=True)
+        .distinct()
+        .order_by('quality'))
 
 
 def get_marketplaces():

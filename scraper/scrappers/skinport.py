@@ -1,4 +1,3 @@
-# scrappers/skinport.py
 import requests
 from decimal import Decimal
 from scraper.base import BaseScraper, ScrapeResult
@@ -59,7 +58,7 @@ class SkinportScraper(BaseScraper):
                 ))
                 continue
 
-            # skinport returns prices in cents
+
             min_price = item_data.get('min_price') or item_data.get('suggested_price')
             if not min_price:
                 results.append(ScrapeResult(
@@ -73,7 +72,7 @@ class SkinportScraper(BaseScraper):
 
             results.append(ScrapeResult(
                 item_name=name,
-                price=Decimal(str(min_price / 100)),  # convert cents to dollars
+                price=Decimal(str(min_price)),
                 currency=self.CURRENCY,
                 url=item_data.get("item_page", ""),
             ))
@@ -81,7 +80,5 @@ class SkinportScraper(BaseScraper):
         return results
 
     def get_price(self, item_name: str) -> ScrapeResult:
-        # skinport bulk is more efficient even for single items
-        # since it fetches everything in one request anyway
         results = self.get_prices_bulk([item_name])
         return results[0]
