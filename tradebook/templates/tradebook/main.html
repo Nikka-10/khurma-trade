@@ -19,6 +19,16 @@
     <form action="{% url 'users:logout' %}">
         <button type="submit" class="logout">Logout</button>
     </form>
+    <form method="POST" action="{% url 'users:toggle_2fa' %}">
+        {% csrf_token %}
+        {% if user.two_fa_enabled %}
+            <p>2FA is <strong style="color:green">enabled</strong></p>
+            <button type="submit">Disable 2FA</button>
+        {% else %}
+            <p>2FA is <strong style="color:red">disabled</strong></p>
+            <button type="submit">Enable 2FA</button>
+        {% endif %}
+    </form>
     <br><br>
     <!-- CREATE TAG -->
     <form method="post" action="{% url 'tradebook:create_tag' %}">
