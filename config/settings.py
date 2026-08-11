@@ -166,6 +166,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
@@ -178,3 +182,11 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*'),
     },
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
