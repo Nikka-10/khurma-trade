@@ -49,3 +49,15 @@ def toggle_2fa(user: AbstractBaseUser):
 
     return enabled
 
+
+def delete_expired_otp_codes():
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import OTPCode
+
+    expiry_time = timezone.now() - timedelta(minutes=10)
+    deleted, _ = OTPCode.objects.filter(
+        created_at__lt=expiry_time
+    ).delete()
+    return deleted
+

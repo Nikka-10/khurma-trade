@@ -181,6 +181,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'notification.tasks.check_alerts',
         'schedule': crontab(minute='*'),
     },
+    'cleanup-otp-codes': {
+        'task': 'users.tasks.cleanup_otp_codes',
+        'schedule': crontab(hour='*/6'),  # every 6 hours
+    },
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
