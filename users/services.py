@@ -5,8 +5,8 @@ from django.contrib.auth.base_user import AbstractBaseUser
 
 
 def send_otp_code(user: AbstractBaseUser, user_email: str):
-    otp = OTPCode.generate_for(user)
-    send_verification_code(user_email, otp.code)
+    otp, plain_code = OTPCode.generate_for(user)
+    send_verification_code(user.email, plain_code)
 
 
 def get_user(user_id):
@@ -21,20 +21,22 @@ def get_otp_obj(user: AbstractBaseUser, code: str):
 
 
 def verify_otp_code(user: AbstractBaseUser, code: str):
-    error = None
-    result = False
-    otp = get_otp_obj(user, code)
+    import hashlib
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+
+    otp = (OTPCode.objects
+           .filter(user=user, code_hash=code_hash, is_used=False)
+           .order_by('-created_at')
+           .first())
 
     if not otp:
-        error = 'Invalid code.'
-    elif otp.is_expired:
-        error = 'Code expired. Please log in again.'
-    else:
-        otp.is_used = True
-        otp.save()
-        result = True
+        return False, 'Invalid code.'
+    if otp.is_expired:
+        return False, 'Code expired.'
 
-    return result, error
+    otp.is_used = True
+    otp.save()
+    return True, None
 
 
 def toggle_2fa(user: AbstractBaseUser):
