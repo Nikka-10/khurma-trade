@@ -183,7 +183,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'cleanup-otp-codes': {
         'task': 'users.tasks.cleanup_otp_codes',
-        'schedule': crontab(hour='*/6'),  # every 6 hours
+        'schedule': crontab(hour='*/6'),
     },
 }
 

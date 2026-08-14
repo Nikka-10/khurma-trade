@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 import secrets
+import hashlib
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -44,7 +45,7 @@ class User(AbstractUser):
 
 class OTPCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otp_codes')
-    code = models.CharField(max_length=6)
+    code_hash = models.CharField(max_length=64, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
@@ -59,4 +60,6 @@ class OTPCode(models.Model):
     def generate_for(cls, user) -> 'OTPCode':
         cls.objects.filter(user=user, is_used=False).update(is_used=True)
         code = str(secrets.randbelow(900000) + 100000)
-        return cls.objects.create(user=user, code=code)
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        otp = cls.objects.create(user=user, code_hash=code_hash)
+        return otp, code
