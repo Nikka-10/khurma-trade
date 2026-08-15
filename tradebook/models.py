@@ -21,6 +21,7 @@ class Tag(models.Model):
 class TradeBook(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades')
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
     
     purchase_date = models.DateField(null=True, blank=True)
     purchase_price = models.DecimalField(
