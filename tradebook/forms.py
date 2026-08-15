@@ -10,6 +10,7 @@ class TradeForm(forms.ModelForm):
 
         fields = [
             'item',
+            'quantity',
             'purchase_date',
             'purchase_price',
             'purchase_marketplace',
@@ -25,6 +26,7 @@ class TradeForm(forms.ModelForm):
         ]
 
         widgets = {
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'purchase_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'purchase_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'sell_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -38,7 +40,6 @@ class TradeForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # handle item queryset
         if args and args[0] and args[0].get('item'):
             self.fields['item'].queryset = Item.objects.filter(id=args[0].get('item'))
         elif self.instance and self.instance.pk:
@@ -53,6 +54,17 @@ class TradeForm(forms.ModelForm):
         else:
             self.fields['tags'].queryset = Tag.objects.none()
 
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+
+        if quantity is None:
+            raise ValidationError("Quantity is required.")
+        if quantity <= 0:
+            raise ValidationError("Quantity must be greater than zero.")
+        if quantity > 100:
+            raise ValidationError("Let's be realistic brother XD, Quantity cannot be greater than 100.")
+        return quantity
 
     def clean_purchase_price(self):
         price = self.cleaned_data.get('purchase_price')

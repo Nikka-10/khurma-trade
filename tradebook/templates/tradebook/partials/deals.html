@@ -26,6 +26,7 @@
         <tr>
             <th><input type="checkbox" onclick="toggleAll(this)"></th>
             <th>Item</th>
+            <th>quantity</th>
             <th>Buy</th>
             <th>Sell</th>
             <th>Purchase date</th>
@@ -48,6 +49,7 @@
             </td>
 
             <td>{{ deal.item }}</td>
+            <td>{{ deal.quantity }}</td>
 
             <td>{{ deal.purchase_price }}$</td>
             <td>{{ deal.sell_price|default:"—" }}{% if deal.sell_price %}${% endif %}</td>

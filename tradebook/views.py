@@ -76,6 +76,7 @@ def create_deal(request):
             return redirect('tradebook:tradebook')
         else:
             print("problme with validatoin")
+            print(form.errors)
             return render_main(request, extra_context={'form': form})
 
 
