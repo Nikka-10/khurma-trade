@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     #'allauth.socialaccount.providers.telegram',
     #'allauth.socialaccount.providers.steam',
+
+    'djstripe',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -196,3 +198,10 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
 
 
+
+STRIPE_TEST_SECRET_KEY = os.getenv('STRIPE_TEST_SECRET_KEY')
+STRIPE_TEST_PUBLISHABLE_KEY = os.getenv('STRIPE_TEST_PUBLISHABLE_KEY')
+STRIPE_LIVE_MODE = False
+DJSTRIPE_WEBHOOK_SECRET = os.getenv('DJSTRIPE_WEBHOOK_SECRET')
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'id'
+DJSTRIPE_USE_NATIVE_JSONFIELD = True
