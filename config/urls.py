@@ -23,5 +23,5 @@ urlpatterns = [
     path('trade/', include("tradebook.urls")),
     path("accounts/", include('allauth.urls')),
     path('tracking/', include('tracking.urls')),
-
+    path('stripe/', include('djstripe.urls', namespace='djstripe')),
 ]
