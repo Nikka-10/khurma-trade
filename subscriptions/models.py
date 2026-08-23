@@ -5,13 +5,14 @@ from django.utils import timezone
 
 
 class SubscriptionTier(models.TextChoices):
+    NONE = 'none', 'No subscription'
     BASE = 'Base', 'base'
     ADVANCED = 'Advanced', 'advanced'
 
 
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    tier = models.CharField(max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.BASE)
+    tier = models.CharField(max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.NONE)
 
     stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(default=False)
@@ -33,6 +34,8 @@ class UserSubscription(models.Model):
 
     @property
     def has_base_access(self) -> bool:
+        if self.tier == SubscriptionTier.NONE:
+            return False
         return self.is_active and not self.is_expired
 
     @property
