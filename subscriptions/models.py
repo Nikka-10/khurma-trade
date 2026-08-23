@@ -28,6 +28,12 @@ class UserSubscription(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['user', 'is_active']),]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(tier__in=SubscriptionTier.values),
+                name='valid_subscription_tier'
+            )
+        ]
 
     def __str__(self):
         return f'{self.user.email} — {self.tier}'
@@ -61,6 +67,14 @@ class PromoCode(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(tier__in=SubscriptionTier.values),
+                name='valid_promo_tier',
+            )
+        ]
 
     @property
     def is_valid(self) -> bool:
