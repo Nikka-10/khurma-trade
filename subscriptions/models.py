@@ -5,13 +5,20 @@ from django.utils import timezone
 
 
 class SubscriptionTier(models.TextChoices):
-    BASE = 'Base', 'base'
-    ADVANCED = 'Advanced', 'advanced'
+    NONE = 'none', 'No subscription'
+    BASE = 'base', 'Base'
+    ADVANCED = 'advanced', 'Advanced'
+
+
+class PromoCodeDuration(models.IntegerChoices):
+    WEEK = 7, '7 days'
+    MONTH = 30, '1 month'
+    THREE_MONTHS = 90, '3 months'
 
 
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    tier = models.CharField(max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.BASE)
+    tier = models.CharField(max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.NONE)
 
     stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(default=False)
@@ -33,6 +40,8 @@ class UserSubscription(models.Model):
 
     @property
     def has_base_access(self) -> bool:
+        if self.tier == SubscriptionTier.NONE:
+            return False
         return self.is_active and not self.is_expired
 
     @property
@@ -46,11 +55,12 @@ class UserSubscription(models.Model):
 class PromoCode(models.Model):
     code = models.CharField(max_length=10, unique=True)
     tier = models.CharField(max_length=20, choices=SubscriptionTier.choices)
-    duration_days = models.PositiveIntegerField()
+    duration_days = models.IntegerField(choices=PromoCodeDuration.choices)
     max_uses = models.IntegerField(default=0)
     uses = models.IntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
 
     @property
     def is_valid(self) -> bool:
