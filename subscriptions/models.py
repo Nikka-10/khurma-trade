@@ -6,8 +6,14 @@ from django.utils import timezone
 
 class SubscriptionTier(models.TextChoices):
     NONE = 'none', 'No subscription'
-    BASE = 'Base', 'base'
-    ADVANCED = 'Advanced', 'advanced'
+    BASE = 'base', 'Base'
+    ADVANCED = 'advanced', 'Advanced'
+
+
+class PromoCodeDuration(models.IntegerChoices):
+    WEEK = 7, '7 days'
+    MONTH = 30, '1 month'
+    THREE_MONTHS = 90, '3 months'
 
 
 class UserSubscription(models.Model):
@@ -49,11 +55,12 @@ class UserSubscription(models.Model):
 class PromoCode(models.Model):
     code = models.CharField(max_length=10, unique=True)
     tier = models.CharField(max_length=20, choices=SubscriptionTier.choices)
-    duration_days = models.PositiveIntegerField()
+    duration_days = models.IntegerField(choices=PromoCodeDuration.choices)
     max_uses = models.IntegerField(default=0)
     uses = models.IntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
 
     @property
     def is_valid(self) -> bool:

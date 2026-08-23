@@ -65,7 +65,7 @@ def cancel_subscription(user) -> UserSubscription | None:
     return sub
 
 
-def redeem_promo_code(user: User, code: str):
+def redeem_promo_code(user: User, code: str) -> tuple[bool, str]:
     try:
         promo_code = PromoCode.objects.get(code=code)
     except PromoCode.DoesNotExist:
