@@ -1,4 +1,6 @@
 from django.core.management.base import BaseCommand
+from plain.exceptions import ValidationError
+
 from subscriptions.models import PromoCode
 from django.utils import timezone
 from datetime import timedelta
@@ -19,7 +21,6 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        print(options)
         code = options['code'] or ''.join(
             secrets.choice(string.ascii_uppercase + string.digits)
             for _ in range(8)
@@ -29,20 +30,23 @@ class Command(BaseCommand):
         if options['expires_days']:
             expires_at = timezone.now() + timedelta(days=options['expires_days'])
 
-        promo, created = PromoCode.objects.get_or_create(
-            code=code.upper(),
-            defaults={
-                'tier': options['tier'],
-                'duration_days': options['days'],
-                'max_uses': options['max_uses'],
-                'expires_at': expires_at,
-            }
+        if PromoCode.objects.filter(code=code).exists():
+            self.stdout.write(self.style.WARNING(f'Code {code} already exists'))
+            return
+
+        promo = PromoCode(
+            code=code,
+            tier=options['tier'],
+            duration_days=options['days'],
+            max_uses=options['max_uses'],
+            expires_at=expires_at,
         )
 
-        if created:
+        try:
+            promo.full_clean()
+            promo.save()
             self.stdout.write(self.style.SUCCESS(
-                f'Created promo code: {promo.code} | {promo.tier} | {promo.duration_days} days | max uses: {promo.max_uses}'
+                f'Created: {promo.code} | {promo.tier} | {promo.duration_days} days | max uses: {promo.max_uses}'
             ))
-        else:
-            self.stdout.write(self.style.WARNING(f'Code {code} already exists'))
-
+        except ValidationError as e:
+            self.stdout.write(self.style.ERROR(f'Validation error: {e}'))

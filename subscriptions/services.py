@@ -1,6 +1,6 @@
 from django.utils import timezone
 from datetime import timedelta
-from .models import UserSubscription, PromoCode, PromoCodeRedemption, SubscriptionTier
+from .models import UserSubscription, PromoCode, PromoCodeRedemption, SubscriptionTier, SubscriptionDuration
 from users.models import User
 
 
@@ -39,14 +39,26 @@ def has_advanced_access(user: User) -> bool:
 
 def activate_subscription(user: User,
                           tier: SubscriptionTier,
-                          period: int) -> UserSubscription:
+                          period: int,
+                          stripe_subscription_id: str | None = None,
+                          ) -> UserSubscription:
     if tier not in SubscriptionTier.values:
         raise ValueError(f'Invalid tier: {tier}. Must be one of {SubscriptionTier.values}')
+
+    if period not in SubscriptionDuration.values:
+        raise ValueError(
+            f'Invalid duration: {period}. '
+            f'Must be one of {SubscriptionDuration.values}'
+        )
 
     sub = get_or_create_subscription(user)
     sub.tier = tier
     sub.is_active = True
     sub.current_period_end = timezone.now() + timedelta(days=period)
+
+    if stripe_subscription_id:
+        sub.stripe_subscription_id = stripe_subscription_id
+
     sub.save()
 
     return sub
@@ -92,6 +104,45 @@ def redeem_promo_code(user: User, code: str) -> tuple[bool, str]:
     PromoCodeRedemption.objects.create(user=user, promo_code=promo_code)
 
     return True, f'Successfully activated {tier.label} for {promo_code.duration_days} days.'
+
+
+def sync_from_stripe(stripe_subscription) -> UserSubscription | None:
+    try:
+        customer = stripe_subscription.customer
+        user = User.objects.get(email=customer.email)
+    except User.DoesNotExist:
+        return None
+
+    tier = _get_tier_from_stripe(stripe_subscription)
+    days = _get_days_remining(stripe_subscription)
+
+    sub = activate_subscription(
+        user=user,
+        tier=tier,
+        period=days,
+        stripe_subscription_id=stripe_subscription.id
+    )
+    return sub
+
+
+
+def _get_tier_from_stripe(stripe_subscription) -> SubscriptionTier:
+    product_name = stripe_subscription.plan.product.name.lower()
+    if 'advanced' in product_name:
+        return SubscriptionTier.ADVANCED
+    return SubscriptionTier.BASE
+
+
+def _get_days_remining(stripe_subscription) -> int:
+    from django.utils import timezone
+    end = stripe_subscription.current_period_end
+    delta = end - timezone.now()
+    return max(delta.days, 0)
+
+
+
+
+
 
 
 
