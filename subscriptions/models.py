@@ -10,10 +10,12 @@ class SubscriptionTier(models.TextChoices):
     ADVANCED = 'advanced', 'Advanced'
 
 
-class PromoCodeDuration(models.IntegerChoices):
+class SubscriptionDuration(models.IntegerChoices):
     WEEK = 7, '7 days'
     MONTH = 30, '1 month'
     THREE_MONTHS = 90, '3 months'
+    HALF_YEAR = 180, 'half year'
+    YEAR = 365, '365 days'
 
 
 class UserSubscription(models.Model):
@@ -30,7 +32,7 @@ class UserSubscription(models.Model):
         indexes = [models.Index(fields=['user', 'is_active']),]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(tier__in=SubscriptionTier.values),
+                condition=models.Q(tier__in=SubscriptionTier.values),
                 name='valid_subscription_tier'
             )
         ]
@@ -61,7 +63,7 @@ class UserSubscription(models.Model):
 class PromoCode(models.Model):
     code = models.CharField(max_length=10, unique=True)
     tier = models.CharField(max_length=20, choices=SubscriptionTier.choices)
-    duration_days = models.IntegerField(choices=PromoCodeDuration.choices)
+    duration_days = models.IntegerField(choices=SubscriptionDuration.choices)
     max_uses = models.IntegerField(default=0)
     uses = models.IntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -71,8 +73,12 @@ class PromoCode(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=models.Q(tier__in=SubscriptionTier.values),
+                condition=models.Q(tier__in=SubscriptionTier.values),
                 name='valid_promo_tier',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(duration_days__in=SubscriptionDuration.values),
+                name='valid_promo_duration'
             )
         ]
 
