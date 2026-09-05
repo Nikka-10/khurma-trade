@@ -13,6 +13,7 @@ def signup_page(request):
         form = UserSignUpForm(request.POST)
         if form.is_valid():
             form.save()
+            services.create_stripe_customer(request.user)
             return redirect("users:login")
         return render(request, "users/signup.html", {"form":form})
     form = UserSignUpForm()

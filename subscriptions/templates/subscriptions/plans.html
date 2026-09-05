@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Plans</title>
+    <link rel="stylesheet" href="{% static 'subscriptions/style.css' %}">
+</head>
+<body>
+<div class="container">
+    <h1>Choose your plan</h1>
+    <a href="{% url 'tradebook:tradebook' %}" class="back-link">← Back to Tradebook</a>
+
+    {% if current_sub and current_sub.is_active %}
+    <div class="current-plan">
+        <p>Current plan: <strong>{{ current_sub.get_tier_display }}</strong>
+        — expires {{ current_sub.current_period_end|date:"M d, Y" }}</p>
+        <form method="POST" action="{% url 'subscriptions:cancel' %}">
+            {% csrf_token %}
+            <button class="btn-danger" type="submit"
+                onclick="return confirm('Cancel your subscription?')">
+                Cancel subscription
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if promo_message %}
+    <div class="promo-result {% if promo_success %}success{% else %}error{% endif %}">
+        {{ promo_message }}
+    </div>
+    {% endif %}
+
+    <div class="plans-grid">
+        {% for tier_key, plan in plans.items %}
+        <div class="plan-card {% if current_sub and current_sub.tier == tier_key %}active{% endif %}">
+            <h2>{{ plan.name }}</h2>
+            <p class="description">{{ plan.description }}</p>
+            <div class="prices">
+                {% for period_key, price in plan.prices.items %}
+                <a href="{% url 'subscriptions:checkout' tier_key period_key %}"
+                   class="price-option">
+                    <span class="period">{{ price.label }}</span>
+                    <span class="amount">${{ price.amount }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="promo-section">
+        <h3>Have a promo code?</h3>
+        <form method="POST" action="{% url 'subscriptions:redeem' %}">
+            {% csrf_token %}
+            <input type="text" name="code" placeholder="Enter promo code" class="promo-input">
+            <button type="submit" class="btn">Apply</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

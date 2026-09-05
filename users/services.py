@@ -2,6 +2,11 @@ from .email_sender import send_verification_code
 from .models import OTPCode, User
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.base_user import AbstractBaseUser
+import stripe
+from config import settings
+
+
+stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
 
 def send_otp_code(user: AbstractBaseUser, user_email: str):
@@ -62,4 +67,14 @@ def delete_expired_otp_codes():
         created_at__lt=expiry_time
     ).delete()
     return deleted
+
+
+def create_stripe_customer(user):
+    customer = stripe.Customer.create(
+        email=user.email,
+        metadata={'user_id': user.id}
+    )
+    user.stripe_customer_id = customer.id
+    user.save()
+    return customer
 

@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="{% static 'subscriptions/style.css' %}">
+</head>
+<body>
+<div class="container">
+    <h1>Complete your subscription</h1>
+    <a href="{% url 'subscriptions:plans' %}" class="back-link">← Back to plans</a>
+
+    <div class="checkout-box">
+        <div class="order-summary">
+            <h3>{{ plan.name }} — {{ price.label }}</h3>
+            <p class="total">Total: <strong>${{ price.amount }}</strong></p>
+        </div>
+
+        <div id="payment-element"></div>
+        <div id="payment-errors" class="error-message"></div>
+
+        <button id="submit-btn" class="btn-pay">
+            <span id="btn-text">Pay ${{ price.amount }}</span>
+            <span id="spinner" class="hidden">Processing...</span>
+        </button>
+    </div>
+</div>
+
+<script>
+const stripe = Stripe('{{ publishable_key }}');
+let elements;
+
+async function initialize() {
+    const response = await fetch("{% url 'subscriptions:create_payment_intent' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: JSON.stringify({
+            tier: '{{ tier }}',
+            period: '{{ period }}',
+        }),
+    });
+
+    const { client_secret, error } = await response.json();
+    if (error) {
+        document.getElementById('payment-errors').textContent = error;
+        return;
+    }
+
+    elements = stripe.elements({ clientSecret: client_secret });
+    const paymentElement = elements.create('payment');
+    paymentElement.mount('#payment-element');
+}
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('submit-btn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btn-text');
+
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+    btnText.classList.add('hidden');
+
+    const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+            return_url: '{{ request.scheme }}://{{ request.get_host }}{% url "subscriptions:success" %}',
+        },
+    });
+
+    if (error) {
+        document.getElementById('payment-errors').textContent = error.message;
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.classList.remove('hidden');
+    }
+});
+
+initialize();
+</script>
+</body>
+</html>
