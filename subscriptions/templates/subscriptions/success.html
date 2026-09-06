@@ -1,0 +1,15 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Successful</title>
+    <link rel="stylesheet" href="{% static 'subscriptions/style.css' %}">
+</head>
+<body>
+<div class="container" style="text-align:center; padding-top: 60px;">
+    <h1>🎉 Payment successful!</h1>
+    <p>Your subscription has been activated.</p>
+    <a href="{% url 'tradebook:tradebook' %}" class="btn">Go to Tradebook</a>
+</div>
+</body>
+</html>

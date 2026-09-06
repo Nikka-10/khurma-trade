@@ -33,6 +33,7 @@ class User(AbstractUser):
     profile_image = models.ImageField(null=True, blank=True)
     telegram_chat_id = models.CharField(max_length=50, null=True, blank=True)
     two_fa_enabled = models.BooleanField(default=False)
+    stripe_customer_id = models.CharField(max_length=255, null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = [] 
