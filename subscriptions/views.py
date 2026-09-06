@@ -115,6 +115,7 @@ def stripe_webhook(request):
     except (ValueError, stripe.error.SignatureVerificationError):
         return JsonResponse({'error': 'Invalid'}, status=400)
 
+
     if event['type'] in ('customer.subscription.created',
                          'customer.subscription.updated'):
         services.sync_from_stripe(event['data']['object'])

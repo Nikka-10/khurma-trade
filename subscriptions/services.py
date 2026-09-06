@@ -2,7 +2,7 @@ import stripe
 from config import settings
 from django.utils import timezone
 from django.core.cache import cache
-from datetime import timedelta
+from datetime import timedelta, timezone as dt_timezone
 from .models import UserSubscription, PromoCode, PromoCodeRedemption, SubscriptionTier, SubscriptionDuration
 from users.models import User
 
@@ -68,7 +68,7 @@ def get_or_create_subscription(user: User) -> UserSubscription:
     sub, _ = UserSubscription.objects.get_or_create(
         user=user,
         defaults={
-            'tier': None,
+            'tier': SubscriptionTier.NONE,
             'is_active': False,
         }
     )
@@ -197,6 +197,10 @@ def sync_from_stripe(stripe_sub) -> UserSubscription | None:
         price = stripe.Price.retrieve(price_id, expand=['product'])
         tier_key = price.product.name.lower()
 
+    product_id = stripe_sub['items']['data'][0]['price']['product']
+    product = stripe.Product.retrieve(product_id)
+    tier_key = product.name.lower()
+
     try:
         tier = SubscriptionTier(tier_key)
     except ValueError:
@@ -204,8 +208,8 @@ def sync_from_stripe(stripe_sub) -> UserSubscription | None:
 
     import datetime
     period_end = datetime.datetime.fromtimestamp(
-        stripe_sub['current_period_end'],
-        tz=timezone.utc
+        stripe_sub['items']['data'][0]['current_period_end'],
+        tz=dt_timezone.utc
     )
 
     sub = get_or_create_subscription(user)
@@ -215,6 +219,7 @@ def sync_from_stripe(stripe_sub) -> UserSubscription | None:
     sub.stripe_subscription_id = stripe_sub['id']
     sub.cancelled_at = None
     sub.save()
+
     return sub
 
 
