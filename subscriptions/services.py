@@ -240,17 +240,33 @@ def _get_days_remining(stripe_subscription) -> int:
 
 def create_subscription_intent(request, customer_id, tier, price_data):
     return stripe.Subscription.create(
-            customer=customer_id,
-            items=[{'price': price_data['id']}],
-            payment_behavior='default_incomplete',
-            payment_settings={'save_default_payment_method': 'on_subscription'},
-            expand=['latest_invoice.confirmation_secret'],
-            metadata={
-                'user_id': request.user.id,
-                'tier': tier,
-            }
-        )
+        customer=customer_id,
+        items=[{'price': price_data['id']}],
+        payment_behavior='default_incomplete',
+        payment_settings={'save_default_payment_method': 'on_subscription'},
+        expand=['latest_invoice.confirmation_secret'],
+        metadata={
+            'user_id': request.user.id,
+            'tier': tier,
+        }
+    )
 
+
+def upgrade_subscription(request, existing_sub_id, tier, price_data):
+    existing_sub = stripe.Subscription.retrieve(existing_sub_id)
+    return stripe.Subscription.modify(
+        existing_sub_id,
+        items=[{
+            'id': existing_sub['items']['data'][0].id,
+            'price': price_data['id'],
+        }],
+        proration_behavior='always_invoice',
+        expand=['latest_invoice.confirmation_secret'],
+        metadata={
+            'user_id': request.user.id,
+            'tier': tier,
+        }
+    )
 
 
 

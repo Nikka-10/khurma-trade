@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from items.models import Item, Marketplace, ItemListing
@@ -6,10 +5,12 @@ from .models import TrackedItem
 from . import services
 from items import services as item_services
 from items.services import get_qualities
+from subscriptions.decorators import need_advanced_access
 
 
 login_url = '/login'
 
+@need_advanced_access
 @login_required(login_url=login_url)
 def tracking_render(request,  extra_context=None):
 
@@ -57,7 +58,7 @@ def tracking_render(request,  extra_context=None):
 
     return render(request, 'tracking/index.html', context)
 
-
+@need_advanced_access
 @login_required(login_url=login_url)
 def search_items(request):
     query = request.GET.get('q', '').strip()
@@ -72,7 +73,7 @@ def search_items(request):
 
     return render(request, 'items/partials/item_results.html', {'items': items})
 
-
+@need_advanced_access
 @login_required(login_url=login_url)
 def item_prices(request, item_id):
     item = get_object_or_404(Item, id=item_id)
@@ -92,7 +93,7 @@ def item_prices(request, item_id):
         'is_tracked': is_tracked,
     })
 
-
+@need_advanced_access
 @login_required(login_url=login_url)
 def track_item(request, item_id):
     item = get_object_or_404(Item, id=item_id)
@@ -120,7 +121,7 @@ def track_item(request, item_id):
     return redirect('tracking:item_prices', item_id=item_id)
 
 
-
+@need_advanced_access
 @login_required(login_url=login_url)
 def remove_tracking(request, item_id):
     if request.method == 'POST':

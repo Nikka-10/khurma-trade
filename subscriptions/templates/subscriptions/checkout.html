@@ -29,8 +29,7 @@
 </div>
 
 <script>
-const stripe = Stripe('{{ publishable_key }}');
-let elements;
+let elements = null;
 
 async function initialize() {
     const response = await fetch("{% url 'subscriptions:create_payment_intent' %}", {
@@ -45,25 +44,33 @@ async function initialize() {
         }),
     });
 
-    const { client_secret, error } = await response.json();
-    if (error) {
-        document.getElementById('payment-errors').textContent = error;
+    const data = await response.json();
+
+    if (data.error) {
+        document.getElementById('payment-errors').textContent = data.error;
         return;
     }
 
-    elements = stripe.elements({ clientSecret: client_secret });
-    const paymentElement = elements.create('payment');
-    paymentElement.mount('#payment-element');
+    if (data.client_secret) {
+        elements = stripe.elements({ clientSecret: data.client_secret });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+    } else {
+        // no payment needed — just show a button
+        document.getElementById('payment-element').innerHTML =
+            '<p style="color:green">✓ No additional payment needed.</p>';
+        document.getElementById('submit-btn').textContent = 'Confirm';
+        document.getElementById('submit-btn').onclick = () => {
+            window.location.href = "{% url 'subscriptions:success' %}";
+        };
+    }
 }
 
 document.getElementById('submit-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('submit-btn');
-    const spinner = document.getElementById('spinner');
-    const btnText = document.getElementById('btn-text');
+    if (!elements) return;  // handled by onclick above
 
+    const btn = document.getElementById('submit-btn');
     btn.disabled = true;
-    spinner.classList.remove('hidden');
-    btnText.classList.add('hidden');
 
     const { error } = await stripe.confirmPayment({
         elements,
@@ -75,8 +82,6 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
     if (error) {
         document.getElementById('payment-errors').textContent = error.message;
         btn.disabled = false;
-        spinner.classList.add('hidden');
-        btnText.classList.remove('hidden');
     }
 });
 
