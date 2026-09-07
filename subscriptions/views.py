@@ -42,6 +42,10 @@ def checkout_view(request, tier, period):
     })
 
 
+@login_required(login_url=login_url)
+def need_sub_page(request, tier):
+    return render(request, 'subscriptions/need_sub.html', {'tier': tier})
+
 
 @require_POST
 @login_required(login_url=login_url)
@@ -63,14 +67,26 @@ def create_subscription_intent(request):
             customer = create_stripe_customer(request.user)
             customer_id = customer.id
 
-        subscription = services.create_subscription_intent(request, customer_id, tier, price_data)
+        existing_sub_id = request.user.subscription.stripe_subscription_id if hasattr(request.user, 'subscription') else None
 
+        if existing_sub_id:
+            subscription = services.upgrade_subscription(request, existing_sub_id, tier, price_data)
+        else:
+            subscription = services.create_subscription_intent(request, customer_id, tier, price_data)
+
+        invoice = subscription.latest_invoice
+        if invoice and invoice.confirmation_secret:
+            client_secret = invoice.confirmation_secret.client_secret
+        else:
+            client_secret = None
         return JsonResponse({
-            'client_secret': subscription.latest_invoice.confirmation_secret.client_secret,
+            'client_secret': client_secret,
             'subscription_id': subscription.id,
+            'subscription_status': subscription.status,
         })
 
     except Exception as e:
+        print("problem: ", e)
         return JsonResponse({'error': 'more global error, Invalid plan'}, status=400)
 
 

@@ -12,5 +12,5 @@ urlpatterns = [
     path('cancel/', views.cancel_subscription, name='cancel'),
     path('redeem/', views.redeem_promo_code, name='redeem'),
     path('webhook/', views.stripe_webhook, name='webhook'),
-
+    path('need-subscription/<str:tier>/', views.need_sub_page, name='need_sub'),
 ]

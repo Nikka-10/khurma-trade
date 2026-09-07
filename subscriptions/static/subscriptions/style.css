@@ -104,3 +104,17 @@ button:hover, .btn:hover { background: #0056b3; }
 .btn-danger { background: #ac0000; }
 .btn-danger:hover { background: #7a0000; }
 .hidden { display: none; }
+
+.con{
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+.need-permission{ font-size: 40px}
+.con a{
+    font-size: 30px;
+    text-decoration: none;
+}
