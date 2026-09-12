@@ -2,13 +2,21 @@ import stripe
 from config import settings
 from django.utils import timezone
 from django.core.cache import cache
-from datetime import timedelta, timezone as dt_timezone
-from .models import UserSubscription, PromoCode, PromoCodeRedemption, SubscriptionTier, SubscriptionDuration
+from datetime import datetime, timedelta, timezone as dt_timezone
+from .models import UserSubscription, PromoCode, PromoCodeRedemption, SubscriptionTier, SubscriptionDuration,ProcessedStripeEvent
 from users.models import User
+from django.db import transaction
 
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
+ACTIVE_STATUSES = {'active', 'trialing'}
+
+INACTIVE_STATUSES = {
+    'canceled',
+    'unpaid',
+    'incomplete_expired',
+}
 
 INTERVAL_TO_KEY = {
     (1, 'month'):  ('month',        '1 month',   SubscriptionDuration.MONTH),
@@ -59,8 +67,8 @@ def get_plans_from_stripe() -> dict:
             'tier': SubscriptionTier(tier_key),
         }
 
-        plans = dict(sorted(plans.items()))
-        cache.set('stripe_plans', plans, timeout=3600)
+    plans = dict(sorted(plans.items()))
+    cache.set('stripe_plans', plans, timeout=3600)
     return plans
 
 
@@ -96,6 +104,7 @@ def has_advanced_access(user: User) -> bool:
     return sub.has_advanced_access
 
 
+@transaction.atomic
 def activate_subscription(user: User,
                           tier: SubscriptionTier,
                           period: int,
@@ -123,6 +132,7 @@ def activate_subscription(user: User,
     return sub
 
 
+@transaction.atomic
 def cancel_subscription(user) -> UserSubscription | None:
     sub = get_subscription(user)
 
@@ -136,6 +146,7 @@ def cancel_subscription(user) -> UserSubscription | None:
             pass
 
     sub.is_active = False
+    sub.stripe_status = "canceled"
     sub.cancelled_at=timezone.now()
     sub.save()
 
@@ -152,6 +163,7 @@ def handle_subscription_cancelled(stripe_sub_id: str) -> None:
         pass
 
 
+@transaction.atomic
 def redeem_promo_code(user: User, code: str) -> tuple[bool, str]:
     try:
         promo_code = PromoCode.objects.get(code=code)
@@ -164,7 +176,7 @@ def redeem_promo_code(user: User, code: str) -> tuple[bool, str]:
     already_used = PromoCodeRedemption.objects.filter(
         user = user,
         promo_code = promo_code
-    )
+    ).exists()
     if already_used:
         return False, "promo code already used"
 
@@ -181,75 +193,74 @@ def redeem_promo_code(user: User, code: str) -> tuple[bool, str]:
     return True, f'Successfully activated {tier.label} for {promo_code.duration_days} days.'
 
 
+@transaction.atomic
 def sync_from_stripe(stripe_sub) -> UserSubscription | None:
+    stripe_sub_id = stripe_sub['id']
+    customer_id = stripe_sub.get('customer')
+    status = stripe_sub.get('status')
+
+    if not customer_id:
+        print("stripe subscriptions has no customer")
+        return None
+
     try:
-        user = User.objects.get(stripe_customer_id=stripe_sub['customer'])
+        user = User.objects.get(
+            stripe_customer_id=customer_id
+        )
     except User.DoesNotExist:
+        print("No user found for Stripe customer %s",)
         return None
 
-    if (status := stripe_sub.get('status')) not in ('active', 'trialing'):
-        handle_subscription_cancelled(stripe_sub['id'])
+    if status in INACTIVE_STATUSES:
+        handle_subscription_cancelled(stripe_sub_id)
         return None
 
+    if status not in ACTIVE_STATUSES:
+        print("Ignoring Stripe subscription %s with status %s")
+        return None
 
-    if not (tier_key := stripe_sub['metadata'].get('tier')):
-        price_id = stripe_sub['items']['data'][0]['price']['id']
-        price = stripe.Price.retrieve(price_id, expand=['product'])
-        tier_key = price.product.name.lower()
+    tier_key = stripe_sub.get('metadata', {}).get('tier')
 
-    product_id = stripe_sub['items']['data'][0]['price']['product']
-    product = stripe.Product.retrieve(product_id)
-    tier_key = product.name.lower()
+    if not tier_key:
+        print("Stripe subscription %s has no tier metadata")
+        return None
 
     try:
         tier = SubscriptionTier(tier_key)
     except ValueError:
+        print("Invalid tier '%s' on Stripe subscription %s")
         return None
 
-    import datetime
-    period_end = datetime.datetime.fromtimestamp(
-        stripe_sub['items']['data'][0]['current_period_end'],
-        tz=dt_timezone.utc
+    items = stripe_sub.get('items', {}).get('data', [])
+
+    if not items:
+        print("Stripe subscription %s has no items")
+        return None
+
+    period_end_timestamp = items[0].get('current_period_end')
+
+    if not period_end_timestamp:
+        print("Stripe subscription %s has no current_period_end")
+        return None
+
+    period_end = datetime.fromtimestamp(
+        period_end_timestamp,
+        tz=dt_timezone.utc,
     )
 
-    sub = get_or_create_subscription(user)
-    sub.tier = tier
-    sub.is_active = True
-    sub.current_period_end = period_end
-    sub.stripe_subscription_id = stripe_sub['id']
-    sub.cancelled_at = None
-    sub.save()
+    sub, _ = UserSubscription.objects.update_or_create(
+        user=user,
+        defaults={
+            'tier': tier,
+            'is_active': True,
+            'stripe_status': status,
+            'current_period_end': period_end,
+            'stripe_subscription_id': stripe_sub_id,
+            'cancelled_at': None,
+        },
+    )
 
     return sub
-
-
-
-def _get_tier_from_stripe(stripe_subscription) -> SubscriptionTier:
-    product_name = stripe_subscription.plan.product.name.lower()
-    if 'advanced' in product_name:
-        return SubscriptionTier.ADVANCED
-    return SubscriptionTier.BASE
-
-
-def _get_days_remining(stripe_subscription) -> int:
-    from django.utils import timezone
-    end = stripe_subscription.current_period_end
-    delta = end - timezone.now()
-    return max(delta.days, 0)
-
-
-def create_subscription_intent(request, customer_id, tier, price_data):
-    return stripe.Subscription.create(
-        customer=customer_id,
-        items=[{'price': price_data['id']}],
-        payment_behavior='default_incomplete',
-        payment_settings={'save_default_payment_method': 'on_subscription'},
-        expand=['latest_invoice.confirmation_secret'],
-        metadata={
-            'user_id': request.user.id,
-            'tier': tier,
-        }
-    )
 
 
 def upgrade_subscription(request, existing_sub_id, tier, price_data):
@@ -261,12 +272,55 @@ def upgrade_subscription(request, existing_sub_id, tier, price_data):
             'price': price_data['id'],
         }],
         proration_behavior='always_invoice',
-        expand=['latest_invoice.confirmation_secret'],
         metadata={
             'user_id': request.user.id,
             'tier': tier,
         }
     )
+
+
+def create_checkout_session(
+    user,
+    customer_id,
+    price_id,
+    tier,
+    success_url,
+    cancel_url,
+):
+    return stripe.checkout.Session.create(
+        mode='subscription',
+        customer=customer_id,
+        line_items=[
+            {
+                'price': price_id,
+                'quantity': 1,
+            }
+        ],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            'user_id': str(user.id),
+        },
+        subscription_data={
+            'metadata': {
+                'user_id': str(user.id),
+                'tier': tier,
+            },
+        },
+    )
+
+def create_stripe_customer(user):
+    customer = stripe.Customer.create(
+        email=user.email,
+        metadata={'user_id': user.id}
+    )
+    user.stripe_customer_id = customer.id
+    user.save()
+    return customer
+
+def mark_webhook_processed(event_id):
+    _, created = ProcessedStripeEvent.objects.get_or_create(event_id=event_id)
+    return created
 
 
 

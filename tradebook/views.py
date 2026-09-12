@@ -9,8 +9,8 @@ from subscriptions.decorators import need_base_access, need_advanced_access
 
 login_url = '/login'
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def tradebook_view(request):
     tag_id = request.GET.get('tag')
     date = request.GET.get('date')
@@ -48,8 +48,8 @@ def tradebook_view(request):
     })
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def render_main(request, extra_context=None):
     from items.services import get_qualities
     context = {
@@ -66,8 +66,8 @@ def render_main(request, extra_context=None):
     return render(request, 'tradebook/main.html', context)
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def create_deal(request):
     print(request.POST)
     if request.method == 'POST':
@@ -81,8 +81,8 @@ def create_deal(request):
             return render_main(request, extra_context={'form': form})
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def delete_deal(request):
     if request.method == 'POST':
 
@@ -97,8 +97,8 @@ def delete_deal(request):
         return render_main(request)
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def edit_deal(request, deal_id):
     deal = get_object_or_404(TradeBook, id=deal_id, user=request.user)
     if request.method == 'POST':
@@ -111,8 +111,8 @@ def edit_deal(request, deal_id):
         return render_main(request, {'form': form})
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def create_tag(request):
     if request.method == 'POST':
         tag_form = CreateTagForm(request.POST, user=request.user)
@@ -123,8 +123,8 @@ def create_tag(request):
             return render_main(request, {'tag_form': tag_form})
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def delete_tag(request):
     if request.method == 'POST':
         services.delete_tag(request.user, request.POST.get('tag'))
@@ -133,8 +133,8 @@ def delete_tag(request):
        return render_main(request)
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def upload_csv(request):
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
@@ -146,8 +146,8 @@ def upload_csv(request):
     return redirect('tradebook:tradebook')
 
 
-@need_base_access
 @login_required(login_url=login_url)
+@need_base_access
 def search_items(request):
     query = request.GET.get('q', '').strip()
     game = request.GET.get('game', '').strip()

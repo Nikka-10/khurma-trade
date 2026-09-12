@@ -38,13 +38,17 @@
             <h2>{{ plan.name }}</h2>
             <p class="description">{{ plan.description }}</p>
             <div class="prices">
-                {% for period_key, price in plan.prices.items %}
-                <a href="{% url 'subscriptions:checkout' tier_key period_key %}"
-                   class="price-option">
-                    <span class="period">{{ price.label }}</span>
-                    <span class="amount">${{ price.amount }}</span>
-                </a>
-                {% endfor %}
+                <div class="prices">
+                    {% for period_key, price in plan.prices.items %}
+                    <button
+                        type="button"
+                        class="price-option"
+                        onclick="createSubscription('{{ tier_key }}', '{{ period_key }}')">
+                        <span class="period">{{ price.label }}</span>
+                        <span class="amount">${{ price.amount }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -59,5 +63,33 @@
         </form>
     </div>
 </div>
+
+<script>
+function createSubscription(tier, period) {
+    fetch("{% url 'subscriptions:create_subscription' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+            tier: tier,
+            period: period
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        } else if (data.error) {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        alert("Something went wrong.");
+    });
+}
+</script>
 </body>
 </html>

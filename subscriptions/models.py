@@ -24,6 +24,7 @@ class UserSubscription(models.Model):
 
     stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    stripe_status = models.CharField(max_length=30, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -79,7 +80,7 @@ class PromoCode(models.Model):
             models.CheckConstraint(
                 condition=models.Q(duration_days__in=SubscriptionDuration.values),
                 name='valid_promo_duration'
-            )
+            ),
         ]
 
     @property
@@ -100,4 +101,20 @@ class PromoCodeRedemption(models.Model):
     redeemed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'promo_code')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'promo_code'],
+                name='unique_user_promo_redemption',
+            ),
+        ]
+
+
+class ProcessedStripeEvent(models.Model):
+    event_id = models.CharField(max_length=255, unique=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # class Meta:
+    #     constraints = [
+    #
+    #     ]
