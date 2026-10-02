@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from . import services, stripe_services
 from .models import SubscriptionTier
-from .webhook import dispatch
+from . import webhook
 
 login_url = '/login'
 
@@ -30,12 +30,13 @@ def need_sub_page(request, tier):
 
 @login_required(login_url=login_url)
 @require_POST
-def create_subscription(request):
+def quote_subscription(request):
     try:
         data = json.loads(request.body)
         tier_key, period = data['tier'], data['period']
 
         plans = stripe_services.get_plans()
+
         if tier_key not in plans or period not in plans[tier_key]['prices']:
             return JsonResponse({'error': 'Invalid plan'}, status=400)
 
@@ -44,33 +45,108 @@ def create_subscription(request):
 
         if services.is_downgrade(current_sub, tier, period):
             return JsonResponse(
-                {'error': 'Downgrading is not supported. Cancel your current subscription first if you want a lower plan.'},
-                status=400,
+                {'error': 'Downgrading is not supported.'},
+                status=400
             )
 
         price_data = plans[tier_key]['prices'][period]
 
-        if current_sub and current_sub.stripe_subscription_id and current_sub.is_active:
-            stripe_services.upgrade_subscription(
-                request.user, current_sub.stripe_subscription_id, price_data['id'], tier_key
+        is_upgrade = bool(
+            current_sub
+            and current_sub.stripe_subscription_id
+            and current_sub.is_active
+        )
+
+        return JsonResponse({
+            'tier': tier_key,
+            'period': period,
+            'amount': price_data['amount'],
+            'label': price_data['label'],
+            'is_upgrade': is_upgrade,
+            'current_plan': (
+                current_sub.get_tier_display()
+                if is_upgrade else None
+            ),
+        })
+
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+    except Exception:
+        return JsonResponse(
+            {'error': 'Something went wrong'},
+            status=400
+        )
+
+
+@login_required(login_url=login_url)
+@require_POST
+def confirm_subscription(request):
+    try:
+        data = json.loads(request.body)
+        tier_key, period = data['tier'], data['period']
+
+        plans = stripe_services.get_plans()
+
+        if tier_key not in plans or period not in plans[tier_key]['prices']:
+            return JsonResponse({'error': 'Invalid plan'}, status=400)
+
+        tier = SubscriptionTier(tier_key)
+        current_sub = services.get_subscription(request.user)
+
+        if services.is_downgrade(current_sub, tier, period):
+            return JsonResponse(
+                {'error': 'Downgrading is not supported.'},
+                status=400
             )
+
+        price_data = plans[tier_key]['prices'][period]
+
+        is_upgrade = bool(
+            current_sub
+            and current_sub.stripe_subscription_id
+            and current_sub.is_active
+        )
+
+        if is_upgrade:
+            stripe_services.upgrade_subscription(
+                request.user,
+                current_sub.stripe_subscription_id,
+                price_data['id'],
+                tier_key,
+            )
+
             return JsonResponse({
-                'checkout_url': request.build_absolute_uri(reverse('subscriptions:payment_success')),
+                'checkout_url': request.build_absolute_uri(
+                    reverse('subscriptions:payment_success')
+                )
             })
 
         session = stripe_services.start_checkout(
             user=request.user,
             price_id=price_data['id'],
             tier=tier_key,
-            success_url=request.build_absolute_uri(reverse('subscriptions:payment_success')),
-            cancel_url=request.build_absolute_uri(reverse('subscriptions:plans')),
+            success_url=request.build_absolute_uri(
+                reverse('subscriptions:payment_success')
+            ),
+            cancel_url=request.build_absolute_uri(
+                reverse('subscriptions:plans')
+            ),
         )
+
         return JsonResponse({'checkout_url': session.url})
 
     except stripe.error.StripeError as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
     except Exception:
-        return JsonResponse({'error': 'Something went wrong'}, status=400)
+        return JsonResponse(
+            {'error': 'Something went wrong'},
+            status=400
+        )
 
 
 @login_required(login_url=login_url)
@@ -106,20 +182,10 @@ def redeem_promo_code(request):
 @require_POST
 def stripe_webhook(request):
     try:
-        event = stripe_services.verify_webhook_event(
-            request.body, request.META.get('HTTP_STRIPE_SIGNATURE')
-        )
-    except (ValueError, stripe.error.SignatureVerificationError):
+        event = webhook.verify_event(request.body, request.META.get('HTTP_STRIPE_SIGNATURE'))
+    except Exception:
         return JsonResponse({'error': 'Invalid webhook'}, status=400)
 
-    if not services.mark_webhook_processed(event['id']):
-        return JsonResponse({'status': 'already processed'})
+    webhook.dispatch(event)
 
-    try:
-        dispatch(event)
-    except Exception:
-        return JsonResponse(
-            {'error': 'Webhook processing failed'},
-            status=500,
-        )
     return JsonResponse({'status': 'ok'})

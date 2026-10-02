@@ -1,7 +1,16 @@
 import logging
 from . import services
+import stripe
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+def verify_event(payload, signature):
+    return stripe.Webhook.construct_event(
+        payload,
+        signature,
+        settings.DJSTRIPE_WEBHOOK_SECRET
+    )
 
 def dispatch(event: dict) -> None:
 

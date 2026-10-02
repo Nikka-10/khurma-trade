@@ -185,6 +185,11 @@ def activate_from_promo(user, tier: SubscriptionTier, days: int) -> UserSubscrip
 
 
 def redeem_promo_code(user, code: str) -> tuple[bool, str]:
+    sub = get_subscription(user)
+
+    if sub and sub.is_active:
+        return False, 'You already have an active subscription.'
+
     try:
         promo_code = PromoCode.objects.get(code=code.upper().strip())
     except PromoCode.DoesNotExist:
