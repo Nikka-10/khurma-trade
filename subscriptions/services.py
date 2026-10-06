@@ -17,15 +17,6 @@ IGNORE_STATUSES = {'incomplete'}                        # first payment not conf
 
 TIER_RANK = {SubscriptionTier.BASE: 1, SubscriptionTier.ADVANCED: 2}
 
-INTERVAL_TO_KEY = {
-    (1, 'month'): ('month', '1 month'),
-    (3, 'month'): ('three_months', '3 months'),
-    (6, 'month'): ('six_months', '6 months'),
-    (1, 'year'):  ('year', '1 year'),
-}
-
-
-
 def get_or_create_subscription(user) -> UserSubscription:
     sub, _ = UserSubscription.objects.get_or_create(
         user=user,
@@ -215,6 +206,13 @@ def redeem_promo_code(user, code: str) -> tuple[bool, str]:
 
 
 
-def mark_webhook_processed(event_id: str) -> bool:
-    _, created = ProcessedStripeEvent.objects.get_or_create(event_id=event_id)
-    return created
+def is_webhook_processed(event_id: str) -> bool:
+    return ProcessedStripeEvent.objects.filter(
+        event_id=event_id
+    ).exists()
+
+
+def mark_webhook_processed(event_id: str) -> None:
+    ProcessedStripeEvent.objects.get_or_create(
+        event_id=event_id
+    )

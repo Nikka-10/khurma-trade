@@ -182,10 +182,18 @@ def redeem_promo_code(request):
 @require_POST
 def stripe_webhook(request):
     try:
-        event = webhook.verify_event(request.body, request.META.get('HTTP_STRIPE_SIGNATURE'))
-    except Exception:
+        event = stripe_services.verify_webhook_event(
+            request.body,
+            request.META.get('HTTP_STRIPE_SIGNATURE')
+        )
+    except (ValueError, stripe.error.SignatureVerificationError):
         return JsonResponse({'error': 'Invalid webhook'}, status=400)
 
+    if services.is_webhook_processed(event['id']):
+        return JsonResponse({'status': 'already processed'})
+
     webhook.dispatch(event)
+
+    services.mark_webhook_processed(event['id'])
 
     return JsonResponse({'status': 'ok'})

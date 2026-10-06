@@ -108,5 +108,6 @@ def request_cancellation(stripe_subscription_id: str) -> bool:
     try:
         stripe.Subscription.cancel(stripe_subscription_id)
         return True
-    except stripe.error.StripeError:
+    except stripe.error.StripeError as e:
+        print(e)
         return False
