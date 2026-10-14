@@ -32,6 +32,8 @@
     </div>
     {% endif %}
 
+    {% if plans %}
+
     <div class="plans-grid">
         {% for tier_key, plan in plans.items %}
         <div class="plan-card {% if current_sub and current_sub.tier == tier_key %}active{% endif %}">
@@ -53,6 +55,9 @@
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <p>Subscription plans are temporarily unavailable. Please try again later.</p>
+    {% endif %}
 
     <div class="promo-section">
         <h3>Have a promo code?</h3>

@@ -10,14 +10,25 @@ from django.views.decorators.http import require_POST
 from . import services, stripe_services
 from .models import SubscriptionTier
 from . import webhook
+import logging
+from . import exceptions
+
+
+logger = logging.getLogger(__name__)
 
 login_url = '/login'
 
 
 @login_required(login_url=login_url)
 def subscription_view(request):
+    try:
+        plans = stripe_services.get_plans()
+    except exceptions.PaymentServiceError:
+        print("we enter here, mf")
+        plans = None
+
     return render(request, 'subscriptions/plans.html', {
-        'plans': stripe_services.get_plans(),
+        'plans': plans,
         'current_sub': services.get_subscription(request.user),
         'publishable_key': settings.STRIPE_TEST_PUBLISHABLE_KEY,
     })
@@ -35,7 +46,10 @@ def quote_subscription(request):
         data = json.loads(request.body)
         tier_key, period = data['tier'], data['period']
 
-        plans = stripe_services.get_plans()
+        try:
+            plans = stripe_services.get_plans()
+        except stripe.error.StripeError:
+            plans = None
 
         if tier_key not in plans or period not in plans[tier_key]['prices']:
             return JsonResponse({'error': 'Invalid plan'}, status=400)
@@ -72,12 +86,6 @@ def quote_subscription(request):
     except (KeyError, json.JSONDecodeError):
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
-    except Exception:
-        return JsonResponse(
-            {'error': 'Something went wrong'},
-            status=400
-        )
-
 
 @login_required(login_url=login_url)
 @require_POST
@@ -86,7 +94,10 @@ def confirm_subscription(request):
         data = json.loads(request.body)
         tier_key, period = data['tier'], data['period']
 
-        plans = stripe_services.get_plans()
+        try:
+            plans = stripe_services.get_plans()
+        except stripe.error.StripeError:
+            plans = None
 
         if tier_key not in plans or period not in plans[tier_key]['prices']:
             return JsonResponse({'error': 'Invalid plan'}, status=400)

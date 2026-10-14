@@ -11,11 +11,12 @@ from .stripe_services import INTERVAL_TO_KEY
 
 logger = logging.getLogger(__name__)
 
-ACTIVE_STATUSES = {'active', 'trialing', 'past_due'}   # past_due = grace period, stays active
+ACTIVE_STATUSES = {'active', 'trialing', 'past_due'}
 DEACTIVATE_STATUSES = {'canceled', 'unpaid', 'incomplete_expired'}
-IGNORE_STATUSES = {'incomplete'}                        # first payment not confirmed yet
+IGNORE_STATUSES = {'incomplete'}
 
 TIER_RANK = {SubscriptionTier.BASE: 1, SubscriptionTier.ADVANCED: 2}
+
 
 def get_or_create_subscription(user) -> UserSubscription:
     sub, _ = UserSubscription.objects.get_or_create(
@@ -51,29 +52,30 @@ def sync_from_stripe(stripe_sub: dict) -> UserSubscription | None:
     status = stripe_sub.get('status')
 
     if not customer_id:
-        logger.warning(f'Subscription {stripe_sub_id} has no customer')
+        logger.warning('Subscription %s has no customer', stripe_sub_id)
         return None
 
     try:
         user = User.objects.get(stripe_customer_id=customer_id)
     except User.DoesNotExist:
-        logger.warning(f'No user found for Stripe customer {customer_id}')
+        logger.warning('No user found for Stripe customer %s', customer_id)
         return None
 
     if status in DEACTIVATE_STATUSES:
+        logger.info('Deactivating subscription %s for customer: %s', stripe_sub_id, customer_id)
         return handle_subscription_cancelled(stripe_sub_id)
 
     if status in IGNORE_STATUSES:
-        logger.info(f'Subscription {stripe_sub_id} is {status} — waiting for confirmation')
+        logger.info('Subscription %s is %s — waiting for confirmation',stripe_sub_id, status)
         return None
 
     if status not in ACTIVE_STATUSES:
-        logger.warning(f'Unhandled status "{status}" on subscription {stripe_sub_id}')
+        logger.warning('Unhandled status %s on subscription %s',status, stripe_sub_id )
         return None
 
     tier_key = stripe_sub.get('metadata', {}).get('tier')
     if not tier_key:
-        logger.warning(f'Subscription {stripe_sub_id} has no tier metadata')
+        logger.warning('Subscription %s has no tier metadata', stripe_sub_id)
         return None
 
     try:
