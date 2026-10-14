@@ -6,9 +6,9 @@ app_name = 'subscriptions'
 
 urlpatterns = [
     path('', views.subscription_view, name='plans'),
-    path('checkout/<str:tier>/<str:period>/', views.checkout_view, name='checkout'),
-    path('create-payment-intent/', views.create_subscription_intent, name='create_payment_intent'),
-    path('success/', views.payment_success, name='success'),
+    path('quote_subscription', views.quote_subscription, name='quote'),
+    path('confirm_subscription/', views.confirm_subscription, name='confirm'),
+    path('payment_success/', views.payment_success, name='payment_success'),
     path('cancel/', views.cancel_subscription, name='cancel'),
     path('redeem/', views.redeem_promo_code, name='redeem'),
     path('webhook/', views.stripe_webhook, name='webhook'),

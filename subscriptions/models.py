@@ -18,12 +18,22 @@ class SubscriptionDuration(models.IntegerChoices):
     YEAR = 365, '365 days'
 
 
+PERIOD_KEYS = {
+    'month': SubscriptionDuration.MONTH,
+    'three_months': SubscriptionDuration.THREE_MONTHS,
+    'six_months': SubscriptionDuration.HALF_YEAR,
+    'year': SubscriptionDuration.YEAR,
+}
+
+
 class UserSubscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
     tier = models.CharField(max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.NONE)
 
     stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
+    period_days = models.IntegerField(choices=SubscriptionDuration.choices, null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    stripe_status = models.CharField(max_length=30, blank=True, default='')
     current_period_end = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -79,7 +89,7 @@ class PromoCode(models.Model):
             models.CheckConstraint(
                 condition=models.Q(duration_days__in=SubscriptionDuration.values),
                 name='valid_promo_duration'
-            )
+            ),
         ]
 
     @property
@@ -100,4 +110,20 @@ class PromoCodeRedemption(models.Model):
     redeemed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'promo_code')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'promo_code'],
+                name='unique_user_promo_redemption',
+            ),
+        ]
+
+
+class ProcessedStripeEvent(models.Model):
+    event_id = models.CharField(max_length=255, unique=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # class Meta:
+    #     constraints = [
+    #
+    #     ]

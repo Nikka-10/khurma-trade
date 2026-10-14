@@ -172,6 +172,44 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 
+# config/settings.py
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'subscriptions_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'subscriptions.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'subscriptions': {
+            'handlers': ['console', 'subscriptions_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+    },
+}
+
+
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
@@ -186,6 +224,10 @@ CELERY_BEAT_SCHEDULE = {
     'cleanup-otp-codes': {
         'task': 'users.tasks.cleanup_otp_codes',
         'schedule': crontab(hour='*/6'),
+    },
+    'cleanup-stripe-events': {
+        'task': 'subscriptions.tasks.cleanup_processed_events',
+        'schedule': crontab(hour=3, minute=0),  # daily at 3am
     },
 }
 

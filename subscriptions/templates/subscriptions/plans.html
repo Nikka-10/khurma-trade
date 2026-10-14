@@ -32,23 +32,32 @@
     </div>
     {% endif %}
 
+    {% if plans %}
+
     <div class="plans-grid">
         {% for tier_key, plan in plans.items %}
         <div class="plan-card {% if current_sub and current_sub.tier == tier_key %}active{% endif %}">
             <h2>{{ plan.name }}</h2>
             <p class="description">{{ plan.description }}</p>
             <div class="prices">
-                {% for period_key, price in plan.prices.items %}
-                <a href="{% url 'subscriptions:checkout' tier_key period_key %}"
-                   class="price-option">
-                    <span class="period">{{ price.label }}</span>
-                    <span class="amount">${{ price.amount }}</span>
-                </a>
-                {% endfor %}
+                <div class="prices">
+                    {% for period_key, price in plan.prices.items %}
+                        <button
+                            type="button"
+                            class="price-option"
+                            onclick="selectPlan('{{ tier_key }}', '{{ period_key }}')">
+                            <span class="period">{{ price.label }}</span>
+                            <span class="amount">${{ price.amount }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endfor %}
     </div>
+    {% else %}
+    <p>Subscription plans are temporarily unavailable. Please try again later.</p>
+    {% endif %}
 
     <div class="promo-section">
         <h3>Have a promo code?</h3>
@@ -59,5 +68,78 @@
         </form>
     </div>
 </div>
+
+<div id="confirm-box" class="hidden">
+    <p id="confirm-text"></p>
+
+    <button type="button" id="confirm-btn">
+        Confirm
+    </button>
+
+    <button type="button" onclick="closeConfirmBox()">
+        Cancel
+    </button>
+</div>
+
+<script>
+async function selectPlan(tier, period) {
+    const res = await fetch("{% url 'subscriptions:quote' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({tier, period}),
+    });
+
+    const quote = await res.json();
+
+    if (quote.error) {
+        alert(quote.error);
+        return;
+    }
+
+    const msg = quote.is_upgrade
+        ? `Change your plan from ${quote.current_plan} to ${quote.label} ${tier}. Stripe will calculate the prorated charge for the change.`
+        : `Subscribe to ${tier} — ${quote.label} for $${quote.amount}.`;
+
+    document.getElementById('confirm-text').textContent = msg;
+    document.getElementById('confirm-box').classList.remove('hidden');
+
+    document.getElementById('confirm-btn').onclick = () => {
+        confirmPlan(tier, period);
+    };
+}
+
+
+async function confirmPlan(tier, period) {
+    const confirmBtn = document.getElementById('confirm-btn');
+
+    confirmBtn.disabled = true;
+
+    const res = await fetch("{% url 'subscriptions:confirm' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({tier, period}),
+    });
+
+    const data = await res.json();
+
+    if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+    } else {
+        confirmBtn.disabled = false;
+        alert(data.error || 'Something went wrong');
+    }
+}
+
+
+function closeConfirmBox() {
+    document.getElementById('confirm-box').classList.add('hidden');
+}
+</script>
 </body>
 </html>

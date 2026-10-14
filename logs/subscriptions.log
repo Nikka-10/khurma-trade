@@ -1,0 +1,5 @@
+[2026-10-14 22:38:32,946] INFO subscriptions: Test message for subscriptions.log
+[2026-10-14 22:40:18,180] ERROR subscriptions: TEST: subscriptions error
+[2026-10-14 23:02:26,250] WARNING subscriptions.stripe_services: plans are empty
+[2026-10-15 00:07:01,946] INFO subscriptions.services: Synced subscription for root@gmail.com: base (active) until 2026-11-14 20:06:01+00:00
+[2026-10-15 00:08:22,074] INFO subscriptions.services: Synced subscription for root@gmail.com: base (active) until 2027-01-14 20:06:01+00:00
