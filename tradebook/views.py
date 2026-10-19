@@ -29,7 +29,7 @@ def tradebook_view(request):
             "whole_profit": whole_profit,
             "monthly_profit": monthly_profit,
             'active_month': date,
-            "is_month_view": is_month_view,# some test stuf for nice front-end, gonna delete later
+            "is_month_view": is_month_view, # some test stuff for nice front-end, gonna delete later, probably
             'marketplaces': item_services.get_marketplaces()
         })
 

@@ -33,7 +33,7 @@ class TradeForm(forms.ModelForm):
             'sell_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'hold_till': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'tags': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'tags': forms.CheckboxSelectMultiple()
         }
 
     def __init__(self, *args, **kwargs):
@@ -140,6 +140,9 @@ class CreateTagForm(forms.ModelForm):
         if Tag.objects.filter(tag=tag, user=self.user ).exists():
             raise ValidationError("Tag already exists.")
         return tag
+
+
+
 
 
 
