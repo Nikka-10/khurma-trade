@@ -1,8 +1,10 @@
+from django.utils import timezone
 from django import forms
 from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from items.models import Item
-from .models import TradeBook, Tag
+from .models import TradeBook, Tag, Exchange, ExchangeItems
+from django.forms import inlineformset_factory
 
 class TradeForm(forms.ModelForm):
     class Meta:
@@ -33,7 +35,7 @@ class TradeForm(forms.ModelForm):
             'sell_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'hold_till': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'tags': forms.CheckboxSelectMultiple()
+            'tags': forms.CheckboxSelectMultiple(attrs={'class': 'tag-pills'})
         }
 
     def __init__(self, *args, **kwargs):
@@ -88,8 +90,8 @@ class TradeForm(forms.ModelForm):
     
     def clean_notes(self):
         notes = self.cleaned_data.get('notes', '').strip()
-        if len(notes) > 5000:
-            raise ValidationError("Notes are too long (max 5000 characters).")
+        if len(notes) > 100:
+            raise ValidationError("Notes are too long (max 100 characters).")
         return notes
 
     def clean(self):
@@ -142,8 +144,85 @@ class CreateTagForm(forms.ModelForm):
         return tag
 
 
+class ExchangeForm(forms.ModelForm):
+    class Meta:
+        model = Exchange
+
+        fields = [
+            'exchange_date',
+            'marketplace',
+            'marketplace_custom',
+            'estimated_profit',
+            'tags',
+            'notes'
+        ]
+
+        widgets = {
+            'exchange_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'estimated_profit': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+            'tags': forms.CheckboxSelectMultiple(attrs={'class': 'tag-pills'}),
+            'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
+
+        def __init__(self, *args, **kwargs):
+            user = kwargs.pop('user', None)
+            super().__init__(*args, **kwargs)
+
+            self.fields['tags'].queryset = (Tag.objects.filter(user=user) if user else Tag.objects.none())
+
+            if not self.is_bound():
+                self.fields['exchange_date'].initial = timezone.localdate
 
 
+        def clean_notes(self):
+            notes = self.cleaned_data('notes', '').stripe()
+            if len(notes) > 100:
+                raise ValidationError("Notes are too long (max 100 characters).")
 
 
-            
+        def clean(self):
+            cleaned_data = super().clean()
+            return cleaned_data
+
+
+class ExchangeItemForm(forms.ModelForm):
+    class Meta:
+        model = ExchangeItems
+
+        fields = ['item', 'quantity',]
+
+        widgets = {
+            'item': forms.HiddenInput(attrs={'class': 'item-id'}),
+            'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'qty-input'}),
+        }
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            if self.is_bound:
+                raw = self.data.get(self.add_prefix('item'))
+                item = Item.objects.filter(pk=raw).first() if raw and str(raw).isdigit() else None
+            elif self.instance.pk:
+                item = self.instance.item
+            else:
+                item = None
+            self.fields['item'].queryset = (
+                Item.objects.filter(pk=item.pk) if item else Item.objects.none()
+            )
+            self.item_label = item.name_on_market if item else ''
+
+
+        def clean_quantity(self):
+            quantity = self.cleaned_data('quantity', '').stripe()
+            if quantity is None:
+                raise ValidationError("Quantity is required.")
+            if quantity <= 0:
+                raise ValidationError("Quantity must be greater than zero.")
+            if quantity > 100:
+                raise ValidationError("Let's be realistic brother XD, Quantity cannot be greater than 100.")
+            return quantity
+
+ExchangeLineFormSet = inlineformset_factory(
+    Exchange, ExchangeItems, form=ExchangeItemForm,
+    extra=0, min_num=1, validate_min=True, can_delete=False,
+)
