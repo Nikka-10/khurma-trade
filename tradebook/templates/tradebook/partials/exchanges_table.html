@@ -1,0 +1,41 @@
+{% if show_exchanges %}
+<h2>Exchanges</h2>
+<p>Estimated profit (your numbers): <strong>{{ exchange_profit|floatformat:2 }}$</strong></p>
+
+<table class="deals-table">
+    <thead>
+        <tr>
+            <th>Date</th><th>You gave</th><th>You received</th><th>Marketplace</th>
+            <th>Est. profit</th><th>Tags</th><th>Notes</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ex in exchanges %}
+        <tr>
+            <td>{{ ex.exchange_date }}</td>
+            <td>{% for l in ex.given_lines %}<div>{{ l.quantity }}× {{ l.item.name_on_market }}</div>{% endfor %}</td>
+            <td>{% for l in ex.received_lines %}<div>{{ l.quantity }}× {{ l.item.name_on_market }}</div>{% endfor %}</td>
+            <td>{{ ex.site }}</td>
+            <td>
+                {% if ex.estimated_profit is not None %}
+                    <span class="{% if ex.estimated_profit > 0 %}profit-pos{% elif ex.estimated_profit < 0 %}profit-neg{% endif %}">
+                        {{ ex.estimated_profit|floatformat:2 }}$
+                    </span>
+                {% else %}—{% endif %}
+            </td>
+            <td>{% for t in ex.tags.all %}<span class="tag-chip">{{ t.tag }}</span> {% endfor %}</td>
+            <td>{{ ex.notes|default:"—"|truncatechars:60 }}</td>
+            <td>
+                <form method="POST" action="{% url 'tradebook:delete_exchange' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="exchange_id" value="{{ ex.id }}">
+                    <button class="btn-danger" type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">No exchanges found</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}

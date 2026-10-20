@@ -12,4 +12,6 @@ urlpatterns=[
     path('edit_deal/<int:deal_id>/', views.edit_deal, name="edit_deal"),
     path('upload_csv', views.upload_csv, name="upload_csv"),
     path('search_items/', views.search_items, name="search_items"),
+    path('exchange/create/', views.create_exchange, name='create_exchange'),
+    path('exchange/delete/', views.delete_exchange, name='delete_exchange'),
 ]

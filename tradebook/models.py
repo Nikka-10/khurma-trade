@@ -118,4 +118,58 @@ class TradeBook(models.Model):
                 self.sell_date.year != self.purchase_date.year or
                 self.sell_date.month != self.purchase_date.month
         )
-      
+
+
+
+class Exchange(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    exchange_date = models.DateField()
+    marketplace = models.ForeignKey(Marketplace, on_delete=models.PROTECT, blank=True)
+    marketplace_custom = models.CharField(max_length=255, blank=True)
+    estimated_profit = models.DecimalField(
+        max_digits=12, decimal_places=2, blank=True, null=True,
+        help_text='Optional. Your own estimate, not calculated.',
+    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="exchanges")
+    notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['user', 'exchange_date'])]
+
+    def __str__(self):
+        return f'Exchange #{self.pk} ({self.exchange_date})'
+
+    @property
+    def site(self) -> str:
+        if self.marketplace.name.lower() == 'custom':
+            return self.marketplace_custom or 'Custom'
+        return self.marketplace.name
+
+    @property
+    def given_items(self):
+        return [ i for i in self.lines.all() if i.side == 'given']
+
+    @property
+    def received_items(self):
+        return [ i for i in self.lines.all() if i.side == 'received']
+
+
+
+class ExchangeItems(models.Model):
+    class Side(models.TextChoices):
+        given = 'given'
+        received = 'received'
+
+    exchange = models.ForeignKey(Exchange, on_delete=models.CASCADE, related_name='lines')
+    item = models.ForeignKey(Item, on_delete=models.PROTECT)
+    side = models.CharField(max_length=10, choices=Side)
+    quantity = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gte=1),
+                                   name='exchange_item_qty_positive'),
+            models.CheckConstraint(condition=models.Q(side__in=['given', 'received']),
+                                   name='exchange_item_valid_side'),
+        ]

@@ -30,6 +30,7 @@
         {% endif %}
     </form>
     <br><br>
+
     <!-- CREATE TAG -->
     <form method="post" action="{% url 'tradebook:create_tag' %}">
         {% csrf_token %}
@@ -38,122 +39,158 @@
         <button type="submit">Create Tag</button>
     </form>
     <br>
+
     <!-- MAIN LAYOUT -->
     <div class="main-layout">
 
         <!-- SIDEBAR -->
         <div class="sidebar">
 
-    <h3>📁 Tags</h3>
+            <h3>📁 Tags</h3>
 
-    <a hx-get="{% url 'tradebook:tradebook' %}"
-       hx-target="#deals"
-       hx-push-url="true">
-        All
-    </a>
+            <a hx-get="{% url 'tradebook:tradebook' %}"
+               hx-vals="js:{mode: currentMode()}"
+               hx-target="#deals"
+               hx-push-url="true">
+                All
+            </a>
 
-{% for tag in tags %}
-<div style="display:inline-flex; align-items:center; gap:6px; margin-right:8px;">
+            {% for tag in tags %}
+            <div style="display:inline-flex; align-items:center; gap:6px; margin-right:8px;">
 
-    <a href="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
-       hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
-       hx-target="#deals"
-       hx-push-url="true"
-       style="text-decoration:none;">
-        {{ tag.tag }}
-    </a>
+                <a href="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
+                   hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
+                   hx-vals="js:{mode: currentMode()}"
+                   hx-target="#deals"
+                   hx-push-url="true"
+                   style="text-decoration:none;">
+                    {{ tag.tag }}
+                </a>
 
-    <form method="POST" action="{% url 'tradebook:delete_tag' %}" style="margin:0;">
-        {% csrf_token %}
-        <input type="hidden" name="tag" value="{{ tag.id }}">
+                <form method="POST" action="{% url 'tradebook:delete_tag' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="tag" value="{{ tag.id }}">
+                    <button type="submit"
+                        style="background:none; border:none; cursor:pointer; padding:0; font-size:16px;">
+                        <span>🗑️</span>
+                    </button>
+                </form>
 
-        <button type="submit"
-            style="
-                background:none;
-                border:none;
-                cursor:pointer;
-                padding:0;
-                font-size:16px;
-            ">
-            <span>🗑️</span>
-        </button>
-    </form>
+            </div>
+            {% endfor %}
 
-</div>
-{% endfor %}
+            <h3>📅 By Month</h3>
 
-    <h3>📅 By Month</h3>
+            {% for m in months %}
+                <a hx-get="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}"
+                   hx-vals="js:{mode: currentMode()}"
+                   hx-target="#deals"
+                   hx-push-url="true">
+                    {{ m.month|date:"F Y" }}
+                </a>
+            {% endfor %}
 
-    {% for m in months %}
-        <a
-            hx-get="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}"
-            hx-target="#deals"
-            hx-push-url="true"
-        >
-            {{ m.month|date:"F Y" }}
-        </a>
-    {% endfor %}
-
-</div>
-
-
-    <div class="deal-side">
-     <button id="toggleBtn">+ Add Deal</button>
-
-    <form method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="file" name="csv_file" accept=".csv">
-        <button type="submit">Upload CSV</button>
-    </form>
-
-        {% if result.file_error %}
-    <p style="color: red">{{ result.file_error }}</p>
-
-{% else %}
-    <p style="color: green">Successfully imported: {{ result.created }} deals</p>
-
-    {% if result.skipped %}
-        <p>Skipped {{ result.skipped|length }} rows:</p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Row</th>
-                    <th>Errors</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for skip in result.skipped %}
-                <tr>
-                    <td>{{ skip.row }}</td>
-                    <td>
-                        {% for error in skip.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endif %}
-{% endif %}
-
-
-    <div id="formContainer" class="hidden">
-        <form method="POST" action="{% url 'tradebook:create_deal' %}">
-            {% csrf_token %}
-            {% include 'items/partials/search_bar.html' with search_url="/trade/search_items/" %}
-            <div id="item-results"></div>
-            {{ form }}
-            {{ form.errors }}
-            <button type="submit">Save Deal</button>
-        </form>
-    </div>
-        <!-- DEALS -->
-        <div id="deals" class="deals-container">
-            {% include 'tradebook/partials/deals.html' %}
         </div>
 
-    </div>
+        <div class="deal-side">
+            <button id="toggleBtn">+ Add Deal</button>
+
+            <form method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" name="csv_file" accept=".csv">
+                <button type="submit">Upload CSV</button>
+            </form>
+
+            {% if result %}
+                {% if result.file_error %}
+                    <p style="color: red">{{ result.file_error }}</p>
+                {% else %}
+                    <p style="color: green">Successfully imported: {{ result.created }} deals</p>
+
+                    {% if result.skipped %}
+                        <p>Skipped {{ result.skipped|length }} rows:</p>
+                        <table>
+                            <thead>
+                                <tr><th>Row</th><th>Errors</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for skip in result.skipped %}
+                                <tr>
+                                    <td>{{ skip.row }}</td>
+                                    <td>
+                                        {% for error in skip.errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
+            <!-- ADD PANEL: Trade / Exchange -->
+            <div id="formContainer" class="{% if not open_tab %}hidden{% endif %}">
+
+                <div class="segmented" style="--n:2">
+                    <input type="radio" name="form_tab" id="tab-trade" value="trade"
+                           {% if open_tab != 'exchange' %}checked{% endif %}
+                           onchange="showFormTab(this.value)">
+                    <label for="tab-trade">Trade</label>
+
+                    <input type="radio" name="form_tab" id="tab-exchange" value="exchange"
+                           {% if open_tab == 'exchange' %}checked{% endif %}
+                           onchange="showFormTab(this.value)">
+                    <label for="tab-exchange">Exchange</label>
+
+                    <span class="thumb"></span>
+                </div>
+
+                <div id="trade-form-box" class="{% if open_tab == 'exchange' %}hidden{% endif %}">
+                    <form method="POST" action="{% url 'tradebook:create_deal' %}">
+                        {% csrf_token %}
+                        {% include 'items/partials/search_bar.html' with search_url="/trade/search_items/" %}
+                        {{ form }}
+                        {{ form.errors }}
+                        <button type="submit">Save Deal</button>
+                    </form>
+                </div>
+
+                <div id="exchange-form-box" class="{% if open_tab != 'exchange' %}hidden{% endif %}">
+                    {% include 'tradebook/partials/exchange_form.html' %}
+                </div>
+            </div>
+
+            <!-- VIEW SWITCH: Trades / Exchanges / All -->
+            <div class="segmented" id="mode-switch" style="--n:3">
+                <input type="radio" name="mode" id="mode-trade" value="trade"
+                       {% if mode == 'trade' %}checked{% endif %}
+                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
+                       hx-push-url="true" hx-vals="js:{...modeParams('trade')}">
+                <label for="mode-trade">Trades</label>
+
+                <input type="radio" name="mode" id="mode-exchange" value="exchange"
+                       {% if mode == 'exchange' %}checked{% endif %}
+                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
+                       hx-push-url="true" hx-vals="js:{...modeParams('exchange')}">
+                <label for="mode-exchange">Exchanges</label>
+
+                <input type="radio" name="mode" id="mode-all" value="all"
+                       {% if mode == 'all' %}checked{% endif %}
+                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
+                       hx-push-url="true" hx-vals="js:{...modeParams('all')}">
+                <label for="mode-all">All</label>
+
+                <span class="thumb"></span>
+            </div>
+
+            <!-- DEALS + EXCHANGES -->
+            <div id="deals" class="deals-container">
+                {% include 'tradebook/partials/deals.html' %}
+            </div>
+
+        </div>
     </div>
 </div>
 
@@ -167,14 +204,12 @@ btn.addEventListener("click", () => {
 
 // NOTES TOGGLE
 function toggleNotes(id) {
-    const row = document.getElementById("notes-" + id);
-    row.classList.toggle("hidden");
+    document.getElementById("notes-" + id).classList.toggle("hidden");
 }
 
 // SELECT ALL
 document.addEventListener("DOMContentLoaded", () => {
     const selectAll = document.querySelector('input[name="select_all"]');
-
     if (selectAll) {
         selectAll.addEventListener('change', function () {
             document.querySelectorAll('input[name="selected_deals"]').forEach(cb => {
@@ -184,12 +219,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// --- view switch helpers ---
+function currentMode() {
+    const checked = document.querySelector('#mode-switch input:checked');
+    return checked ? checked.value : 'all';
+}
+function modeParams(mode) {                       // keeps ?tag= / ?date= from the URL
+    const params = Object.fromEntries(new URLSearchParams(location.search));
+    params.mode = mode;
+    return params;
+}
+
+// --- add panel tabs ---
+function showFormTab(tab) {
+    document.getElementById('trade-form-box').classList.toggle('hidden', tab !== 'trade');
+    document.getElementById('exchange-form-box').classList.toggle('hidden', tab !== 'exchange');
+}
+
+// --- exchange rows ---
+function addRow(side) {
+    const total = document.getElementById(`id_${side}-TOTAL_FORMS`);
+    const index = parseInt(total.value, 10);
+    const html = document.getElementById(`${side}-empty-row`).innerHTML.replaceAll('__prefix__', index);
+    const container = document.getElementById(`${side}-rows`);
+    container.insertAdjacentHTML('beforeend', html);
+    total.value = index + 1;
+    htmx.process(container.lastElementChild);     // activate the new row's hx-* attributes
+}
+
+// --- item picking: shared by the trade form and the exchange rows ---
+let activeRow = null;
+document.addEventListener('focusin', e => { activeRow = e.target.closest('.item-row'); });
+
 function selectItem(id, name) {
-    document.getElementById('id_item').value = id;
+    if (activeRow) {                              // an exchange row's search box is active
+        activeRow.querySelector('.item-id').value = id;
+        activeRow.querySelector('.item-search').value = name;
+        activeRow.querySelector('.item-results').innerHTML = '';
+        return;
+    }
+    document.getElementById('id_item').value = id;   // original trade behaviour
     document.getElementById('item-search').value = name;
     document.getElementById('item-results').innerHTML = '';
 }
-
 </script>
 
 </body>

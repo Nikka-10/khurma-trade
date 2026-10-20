@@ -1,3 +1,4 @@
+{% if show_trades %}
 <h2>Your Deals</h2>
 
 <p>
@@ -26,7 +27,7 @@
         <tr>
             <th><input type="checkbox" onclick="toggleAll(this)"></th>
             <th>Item</th>
-            <th>quantity</th>
+            <th>Quantity</th>
             <th>Buy</th>
             <th>Sell</th>
             <th>Purchase date</th>
@@ -87,14 +88,14 @@
 
         <!-- NOTES -->
         <tr id="notes-{{ deal.id }}" class="hidden">
-            <td colspan="13" class="notes-box">
+            <td colspan="14" class="notes-box">
                 {{ deal.notes|default:"No notes" }}
             </td>
         </tr>
 
         <!-- EDIT -->
         <tr id="edit-{{ deal.id }}" class="hidden">
-            <td colspan="13">
+            <td colspan="14">
                 <form method="POST" action="{% url 'tradebook:edit_deal' deal.id %}" class="edit-form">
                     {% csrf_token %}
 
@@ -144,11 +145,16 @@
 
         {% empty %}
         <tr>
-            <td colspan="13">No deals found</td>
+            <td colspan="14">No deals found</td>
         </tr>
         {% endfor %}
     </tbody>
-</table><script>
+</table>
+{% endif %}
+
+{% include 'tradebook/partials/exchanges_table.html' %}
+
+<script>
 function toggleEdit(id) {
     document.getElementById("edit-" + id).classList.toggle("hidden");
 }

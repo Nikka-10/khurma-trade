@@ -178,20 +178,25 @@ def activate_from_promo(user, tier: SubscriptionTier, days: int) -> UserSubscrip
 
 
 def redeem_promo_code(user, code: str) -> tuple[bool, str]:
+    normalized_code = code.strip()
+
+    try:
+        promo_code = PromoCode.objects.get(code=normalized_code)
+    except PromoCode.DoesNotExist:
+        return False, 'Promo code does not exist.'
+
     sub = get_subscription(user)
 
     if sub and sub.is_active:
         return False, 'You already have an active subscription.'
 
-    try:
-        promo_code = PromoCode.objects.get(code=code.upper().strip())
-    except PromoCode.DoesNotExist:
-        return False, 'Promo code does not exist.'
-
     if not promo_code.is_valid:
         return False, 'This promo code is expired or has reached its usage limit.'
 
-    if PromoCodeRedemption.objects.filter(user=user, promo_code=promo_code).exists():
+    if PromoCodeRedemption.objects.filter(
+        user=user,
+        promo_code=promo_code,
+    ).exists():
         return False, 'You have already used this promo code.'
 
     try:
@@ -200,12 +205,26 @@ def redeem_promo_code(user, code: str) -> tuple[bool, str]:
         return False, 'Invalid subscription tier on promo code.'
 
     activate_from_promo(user, tier, promo_code.duration_days)
+
     promo_code.uses += 1
     promo_code.save(update_fields=['uses'])
-    PromoCodeRedemption.objects.create(user=user, promo_code=promo_code)
 
-    return True, f'Successfully activated {tier.label} for {promo_code.duration_days} days.'
+    PromoCodeRedemption.objects.create(
+        user=user,
+        promo_code=promo_code,
+    )
 
+    logger.info(
+        'Activated %s for %s days using promo code for user %s',
+        tier.label,
+        promo_code.duration_days,
+        user.username,
+    )
+
+    return True, (
+        f'Successfully activated {tier.label} '
+        f'for {promo_code.duration_days} days.'
+    )
 
 
 def is_webhook_processed(event_id: str) -> bool:

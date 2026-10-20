@@ -5,8 +5,6 @@ from subscriptions.exceptions import StaleStripeReferenceError
 from . import exceptions
 
 logger = logging.getLogger(__name__)
-print(logger)
-print('SUBSCRIPTIONS SERVICES IMPORTED')
 
 stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 stripe.max_network_retries = 3
@@ -43,8 +41,6 @@ def get_plans() -> dict:
         products = stripe.Product.list(active=True)
         for product in products.auto_paging_iter():
             tier_key = product.metadata.get('tier')
-
-            print(product.name, dict(product.metadata), repr(tier_key))
             try:
                 SubscriptionTier(tier_key)
             except ValueError:

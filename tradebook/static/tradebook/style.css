@@ -282,3 +282,36 @@ button:hover {
 .profit-neg {
     color: red;
 }
+/* sliding segmented switch: works for 2 or 3 options via --n */
+.segmented { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+             background: #e4e8ee; border-radius: 10px; padding: 3px; margin: 10px 0; }
+.segmented input { display: none; }
+.segmented label { position: relative; z-index: 1; padding: 8px 20px; text-align: center;
+                   cursor: pointer; color: #333; transition: color .2s; }
+.segmented input:checked + label { color: #fff; }
+.segmented .thumb { position: absolute; top: 3px; bottom: 3px; left: 3px;
+                    width: calc((100% - 6px) / var(--n)); background: #007BFF;
+                    border-radius: 8px; transition: transform .25s ease; }
+.segmented input:nth-of-type(1):checked ~ .thumb { transform: translateX(0); }
+.segmented input:nth-of-type(2):checked ~ .thumb { transform: translateX(100%); }
+.segmented input:nth-of-type(3):checked ~ .thumb { transform: translateX(200%); }
+
+/* tag pills */
+.tag-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-pills > div { display: contents; }
+.tag-pills label { padding: 4px 12px; border: 1px solid #ddd; border-radius: 16px; cursor: pointer; }
+.tag-pills input { display: none; }
+.tag-pills label:has(input:checked) { background: #007BFF; color: #fff; border-color: #007BFF; }
+.tag-chip { display: inline-block; padding: 2px 8px; border-radius: 12px; background: #e9f2ff; font-size: 12px; }
+
+/* exchange form */
+.exchange-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+.exchange-sides fieldset { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+.item-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.item-picker { position: relative; flex: 1; }
+.item-picker .item-search { width: 100%; box-sizing: border-box; padding: 8px; }
+.qty-input { width: 70px; padding: 8px; }
+.item-results { position: absolute; left: 0; right: 0; z-index: 50; background: #fff;
+                border: 1px solid #ddd; border-radius: 8px; max-height: 220px; overflow-y: auto; }
+.item-results:not(:has(div)) { display: none; }
+.item-results div:hover { background: #e9f2ff; }

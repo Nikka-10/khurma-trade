@@ -1,0 +1,29 @@
+<form method="POST" action="{% url 'tradebook:create_exchange' %}" id="exchange-form">
+    {% csrf_token %}
+    {{ exchange_form.non_field_errors }}
+
+    {# only used to narrow the item search; not saved #}
+    <div id="exchange-filters">
+        <label>Game
+            <select name="game">
+                <option value="">All games</option>
+                <option value="CS2">CS2</option>
+                <option value="RUST">Rust</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="exchange-sides">
+        <fieldset>
+            <legend>You gave</legend>
+            {% include 'tradebook/partials/exchange_side.html' with formset=given_formset side='given' %}
+        </fieldset>
+        <fieldset>
+            <legend>You received</legend>
+            {% include 'tradebook/partials/exchange_side.html' with formset=received_formset side='received' %}
+        </fieldset>
+    </div>
+
+    {{ exchange_form.as_p }}
+    <button type="submit">Save exchange</button>
+</form>
