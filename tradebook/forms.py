@@ -164,25 +164,25 @@ class ExchangeForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
 
-        def __init__(self, *args, **kwargs):
-            user = kwargs.pop('user', None)
-            super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
 
-            self.fields['tags'].queryset = (Tag.objects.filter(user=user) if user else Tag.objects.none())
+        self.fields['tags'].queryset = (Tag.objects.filter(user=user) if user else Tag.objects.none())
 
-            if not self.is_bound():
-                self.fields['exchange_date'].initial = timezone.localdate
-
-
-        def clean_notes(self):
-            notes = self.cleaned_data('notes', '').stripe()
-            if len(notes) > 100:
-                raise ValidationError("Notes are too long (max 100 characters).")
+        if not self.is_bound:
+            self.fields['exchange_date'].initial = timezone.localdate
 
 
-        def clean(self):
-            cleaned_data = super().clean()
-            return cleaned_data
+    def clean_notes(self):
+        notes = self.cleaned_data.get('notes', '').strip()
+        if len(notes) > 100:
+            raise ValidationError("Notes are too long (max 100 characters).")
+
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
 
 
 class ExchangeItemForm(forms.ModelForm):
@@ -196,31 +196,31 @@ class ExchangeItemForm(forms.ModelForm):
             'quantity': forms.NumberInput(attrs={'min': 1, 'class': 'qty-input'}),
         }
 
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-            if self.is_bound:
-                raw = self.data.get(self.add_prefix('item'))
-                item = Item.objects.filter(pk=raw).first() if raw and str(raw).isdigit() else None
-            elif self.instance.pk:
-                item = self.instance.item
-            else:
-                item = None
-            self.fields['item'].queryset = (
-                Item.objects.filter(pk=item.pk) if item else Item.objects.none()
-            )
-            self.item_label = item.name_on_market if item else ''
+        if self.is_bound:
+            raw = self.data.get(self.add_prefix('item'))
+            item = Item.objects.filter(pk=raw).first() if raw and str(raw).isdigit() else None
+        elif self.instance.pk:
+            item = self.instance.item
+        else:
+            item = None
+        self.fields['item'].queryset = (
+            Item.objects.filter(pk=item.pk) if item else Item.objects.none()
+        )
+        self.item_label = item.name_on_market if item else ''
 
 
-        def clean_quantity(self):
-            quantity = self.cleaned_data('quantity', '').stripe()
-            if quantity is None:
-                raise ValidationError("Quantity is required.")
-            if quantity <= 0:
-                raise ValidationError("Quantity must be greater than zero.")
-            if quantity > 100:
-                raise ValidationError("Let's be realistic brother XD, Quantity cannot be greater than 100.")
-            return quantity
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity', '')
+        if quantity is None:
+            raise ValidationError("Quantity is required.")
+        if quantity <= 0:
+            raise ValidationError("Quantity must be greater than zero.")
+        if quantity > 100:
+            raise ValidationError("Let's be realistic brother XD, Quantity cannot be greater than 100.")
+        return quantity
 
 ExchangeLineFormSet = inlineformset_factory(
     Exchange, ExchangeItems, form=ExchangeItemForm,

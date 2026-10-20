@@ -1,0 +1,21 @@
+<div class="item-row">
+    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+    <div class="item-picker">
+        <input type="text" class="item-search" name="q" placeholder="Search item..."
+               autocomplete="off" value="{{ form.item_label }}"
+               hx-get="{% url 'tradebook:search_items' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#results-{{ form.prefix }}"
+               hx-include="#exchange-filters">
+        <div class="item-results" id="results-{{ form.prefix }}"></div>
+    </div>
+
+    {{ form.quantity }}
+
+    {% if removable %}
+        <button type="button" class="btn" onclick="this.closest('.item-row').remove()">✕</button>
+    {% endif %}
+
+    {{ form.item.errors }}{{ form.quantity.errors }}
+</div>
