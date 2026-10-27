@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from .models import TradeBook, Tag, Exchange, ExchangeItems
 from decimal import Decimal
 from .importers.import_csv import ImporterForCsv
+from django.db.models import Prefetch
 
 
 logger = logging.getLogger(__name__)
@@ -136,23 +137,37 @@ def get_monthly_profit(user, date) -> Decimal:
 
 
 def get_exchanges(user, date=None, tag_id=None):
-    qs = (Exchange.objects
-            .filter(user=user)
-            .select_related('marketplace')
-            .prefetch_related('tags', 'lines__item')
-            .order_by('-id', '-exchange_date')
-          )
+    qs = (
+        Exchange.objects
+        .filter(user=user)
+        .select_related('marketplace')
+        .prefetch_related(
+            'tags',
+            Prefetch(
+                'lines',
+                queryset=ExchangeItems.objects
+                    .filter(side=ExchangeItems.Side.given)
+                    .select_related('item'),
+                to_attr='given_lines',
+            ),
+            Prefetch(
+                'lines',
+                queryset=ExchangeItems.objects
+                    .filter(side=ExchangeItems.Side.received)
+                    .select_related('item'),
+                to_attr='received_lines',
+            ),
+        )
+        .order_by('-id', '-exchange_date')
+    )
 
     if tag_id:
-        tag = get_object_or_404(Tag, id=tag_id, user=user)
-        qs = qs.filter(tags__in=tag)
+        tag = get_object_or_404(Tag, id=tag_id, user=user,)
+        qs = qs.filter(tags=tag)
 
     if date:
-        try:
-            year, month = (int(p) for p in date.split('-'))
-        except ValueError:
-            return qs
-        qs = qs.filter(exchange_date__year=year, exchange_date__month=month)
+        year, month = map(int, date.split('-'))
+        qs = qs.filter(exchange_date__year=year, exchange_date__month=month,)
 
     return qs
 

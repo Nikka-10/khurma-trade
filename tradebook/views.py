@@ -1,3 +1,4 @@
+from django.db.utils import DatabaseError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -6,9 +7,12 @@ from .forms import TradeForm, CreateTagForm, ExchangeForm, ExchangeLineFormSet
 from . import services
 from items import services as item_services
 from subscriptions.decorators import need_base_access, need_advanced_access
+import logging
 
 
 login_url = '/login'
+
+logger = logging.getLogger(__name__)
 
 MODES = {'trade', 'exchange', 'all'}
 
@@ -123,12 +127,18 @@ def render_main(request, extra_context=None):
 @need_base_access
 @require_POST
 def create_deal(request):
-    form = TradeForm(request.POST, user=request.user)
-    if form.is_valid():
-        services.create_deal(request.user, form)
+    try:
+        form = TradeForm(request.POST, user=request.user)
+        if form.is_valid():
+            services.create_deal(request.user, form)
+            return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception(
+            "Failed to create deal for user_id=%s",
+            request.user.pk,
+        )
         return redirect('tradebook:tradebook')
-    else:
-        return render_main(request, extra_context={'form': form})
+    return render_main(request, {'form': form})
 
 
 @login_required(login_url=login_url)
@@ -152,9 +162,13 @@ def delete_deal(request):
 @require_POST
 def edit_deal(request, deal_id):
     deal = get_object_or_404(TradeBook, id=deal_id, user=request.user)
-    form = TradeForm(request.POST, instance=deal, user=request.user)
-    if form.is_valid():
-        services.edit_deal(form)
+    try:
+        form = TradeForm(request.POST, instance=deal, user=request.user)
+        if form.is_valid():
+            services.edit_deal(form)
+            return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception("Failed to edit deal for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
     return render_main(request, {'form': form})
 
@@ -163,12 +177,18 @@ def edit_deal(request, deal_id):
 @need_base_access
 @require_POST
 def create_tag(request):
-    tag_form = CreateTagForm(request.POST, user=request.user)
-    if tag_form.is_valid():
-        services.create_tag(request.user, tag_form)
+    try:
+        tag_form = CreateTagForm(request.POST, user=request.user,)
+
+        if tag_form.is_valid():
+            tag = services.create_tag(request.user, tag_form,)
+            return redirect('tradebook:tradebook')
+
+    except DatabaseError:
+        logger.exception("Failed to create tag for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
-    else:
-        return render_main(request, {'tag_form': tag_form})
+
+    return render_main(request, {'tag_form': tag_form})
 
 
 @login_required(login_url=login_url)
@@ -209,12 +229,16 @@ def search_items(request):
 @require_POST
 def create_exchange(request):
     form = ExchangeForm(request.POST, user=request.user, prefix='ex')
-    given = ExchangeLineFormSet(request.POST, prefix='given')
-    received = ExchangeLineFormSet(request.POST, prefix='received')
+    try:
+        given = ExchangeLineFormSet(request.POST, prefix='given')
+        received = ExchangeLineFormSet(request.POST, prefix='received')
 
-    results = [form.is_valid(), given.is_valid(), received.is_valid()]
-    if all(results):
-        services.create_exchange(request.user, form, given, received)
+        results = [form.is_valid(), given.is_valid(), received.is_valid()]
+        if all(results):
+            services.create_exchange(request.user, form, given, received)
+            return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception("Failed to create exchange for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
 
     return render_main(request, {
@@ -240,12 +264,15 @@ def edit_exchange(request):
     user = request.user
     exchange_id = request.POST.get('exchange_id')
     exchange = get_object_or_404(Exchange, pk=exchange_id, user=user,)
-    form = ExchangeForm(request.POST, user=user, instance=exchange, prefix='ex')
+    try:
+        form = ExchangeForm(request.POST, user=user, instance=exchange, prefix='ex')
 
-    if form.is_valid():
-        edited = services.edit_exchange(form)
+        if form.is_valid():
+            edited = services.edit_exchange(form)
+            return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception("Failed to edit exchange for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
-
     return render_main(request, {
         'exchange_form': form,
         'open_tab': 'exchange',

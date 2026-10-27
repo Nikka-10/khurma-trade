@@ -178,11 +178,8 @@ class ExchangeForm(forms.ModelForm):
         notes = self.cleaned_data.get('notes', '').strip()
         if len(notes) > 100:
             raise ValidationError("Notes are too long (max 100 characters).")
+        return notes
 
-
-    def clean(self):
-        cleaned_data = super().clean()
-        return cleaned_data
 
 
 class ExchangeItemForm(forms.ModelForm):
@@ -213,7 +210,7 @@ class ExchangeItemForm(forms.ModelForm):
 
 
     def clean_quantity(self):
-        quantity = self.cleaned_data.get('quantity', '')
+        quantity = self.cleaned_data.get('quantity', None)
         if quantity is None:
             raise ValidationError("Quantity is required.")
         if quantity <= 0:
