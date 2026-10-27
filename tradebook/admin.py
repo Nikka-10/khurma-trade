@@ -19,7 +19,37 @@ class ExchangeItemInline(admin.TabularInline):
     model = ExchangeItems
     extra = 0
 
+
 @admin.register(Exchange)
 class ExchangeAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'exchange_date', 'marketplace', 'estimated_profit']
+    list_display = [
+        'id',
+        'user',
+        'exchange_date',
+        'marketplace',
+        'estimated_profit',
+        'given_items',
+        'received_items',
+    ]
+
     inlines = [ExchangeItemInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('lines__item')
+
+    @admin.display(description='Given Items')
+    def given_items(self, obj):
+        return ', '.join(
+            f'{line.item} x{line.quantity}'
+            for line in obj.lines.all()
+            if line.side == ExchangeItems.Side.given
+        ) or '-'
+
+    @admin.display(description='Received Items')
+    def received_items(self, obj):
+        return ', '.join(
+            f'{line.item} x{line.quantity}'
+            for line in obj.lines.all()
+            if line.side == ExchangeItems.Side.received
+        ) or '-'
