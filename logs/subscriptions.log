@@ -5,3 +5,4 @@
 [2026-10-15 00:08:22,074] INFO subscriptions.services: Synced subscription for root@gmail.com: base (active) until 2027-01-14 20:06:01+00:00
 [2026-10-15 00:47:16,269] INFO subscriptions.webhook: Successfully processed Stripe event evt_1UQZ44IMfBYhBQz9vTORwlDR (customer.subscription.deleted)
 [2026-10-15 01:13:14,348] INFO subscriptions.services: activated Base for 30 days by promo code for user 
+[2026-10-21 01:48:57,748] INFO subscriptions.services: Synced subscription for root@gmail.com: advanced (active) until 2026-11-20 21:47:44+00:00

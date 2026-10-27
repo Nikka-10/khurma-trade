@@ -1,68 +1,95 @@
+import logging
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Value, Q
 from django.db.models.functions import TruncMonth
+from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
 from .models import TradeBook, Tag, Exchange, ExchangeItems
 from decimal import Decimal
 from .importers.import_csv import ImporterForCsv
 
 
+logger = logging.getLogger(__name__)
 
-def get_deals(user, tag_id=None, date=None):
+
+def get_deals(user, tag_id=None, date=None) -> QuerySet:
     deals_qs = (TradeBook.objects
                 .filter(user=user)
                 .select_related('purchase_marketplace', 'sell_marketplace', 'item')
                 .prefetch_related('tags')
                 .order_by('-id'))
-
     if tag_id:
         tag = get_object_or_404(Tag, id=tag_id, user=user)
         deals_qs = deals_qs.filter(tags=tag)
 
     if date:
-        year, month = date.split('-')
-        deals_qs = deals_qs.filter(
-            Q(purchase_date__year=year, purchase_date__month=month) |
-            Q(sell_date__year=year, sell_date__month=month)
-        )
+        try:
+            year, month = map(int, date.split('-'))
+            if year < 1 or not 1 <= month <= 12:
+                raise ValueError
+        except (ValueError, AttributeError):
+            raise ValidationError("Invalid month filter.")
 
     return deals_qs
 
+@transaction.atomic
 def create_deal(user, form):
     deal = form.save(commit=False)
     deal.user = user
-    try:
-        deal.save()
-    except Exception as e:
-        print("SAVE ERROR:", e)
+    deal.save()
     form.save_m2m()
 
-def delete_deal(user, deal_id=None, deal_ids=None):
-    if deal_id:
-        TradeBook.objects.get(user=user, id=deal_id).delete()
-    elif deal_ids:
-        TradeBook.objects.filter(user=user, id__in=deal_ids).delete()
+    return deal
+
+@transaction.atomic
+def delete_deal(user, deal_id=None, deal_ids=None) -> int:
+    if deal_id is not None:
+        qs = TradeBook.objects.filter(
+            user=user,
+            pk=deal_id,
+        )
+    elif deal_ids is not None:
+        qs = TradeBook.objects.filter(
+            user=user,
+            pk__in=deal_ids,
+        )
+    else:
+        return 0
+
+    _, details = qs.delete()
+
+    return details.get(TradeBook._meta.label, 0)
 
 
+@transaction.atomic
 def edit_deal(form):
     deal = form.save(commit=False)
     deal.save()
     form.save_m2m()
+
     return deal
 
 
+@transaction.atomic
 def create_tag(user, form):
     tag = form.save(commit=False)
     tag.user = user
     tag.save()
 
+    return tag
 
+
+@transaction.atomic
 def get_tags(user):
     return Tag.objects.filter(user=user)
 
-def delete_tag(user, tag_id=None):
+@transaction.atomic
+def delete_tag(user, tag_id=None) -> int:
     tag = get_object_or_404(Tag, id=tag_id, user=user)
-    tag.delete()
+    _, details = tag.delete()
+
+    return details.get(Tag._meta.label, 0)
 
 def calc_whole_profit(deals_qs):
     return sum(deal.profit or Decimal('0') for deal in deals_qs)
@@ -78,7 +105,7 @@ def get_months(user):
     return purchase_months.union(sell_months, exchange_months).order_by('-month')
 
 
-def get_monthly_profit(user, date):
+def get_monthly_profit(user, date) -> Decimal:
     if not date:
         return Decimal('0.00')
 
@@ -151,9 +178,30 @@ def create_exchange(user, form, given_formset, received_formset):
     return exchange
 
 
-def delete_exchanges(user, exchange_ids):
-    ids = [i for i in exchange_ids if str(i).isdigit()]
-    Exchange.objects.filter(user=user, id__in=ids).delete()
+@transaction.atomic
+def delete_exchanges(user, exchange_ids) -> int:
+    ids = [
+        int(i)
+        for i in exchange_ids
+        if str(i).isascii() and str(i).isdigit()
+    ]
+
+    _, details = (
+        Exchange.objects
+        .filter(user=user, id__in=ids)
+        .delete()
+    )
+
+    return details.get(Exchange._meta.label, 0)
+
+
+@transaction.atomic
+def edit_exchange(form) -> Exchange:
+    exchange = form.save(commit=False)
+    exchange.save()
+    form.save_m2m()
+
+    return exchange
 
 
 def import_csv(user, csv_file):
