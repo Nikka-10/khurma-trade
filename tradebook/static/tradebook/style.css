@@ -315,3 +315,22 @@ button:hover {
                 border: 1px solid #ddd; border-radius: 8px; max-height: 220px; overflow-y: auto; }
 .item-results:not(:has(div)) { display: none; }
 .item-results div:hover { background: #e9f2ff; }
+.import-result {
+    margin: 12px 0;
+}
+
+.form-error {
+    background: #fff0ed;
+    color: #8b2019;
+    padding: 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+
+.form-warning {
+    background: #fff8e2;
+    color: #805a00;
+    padding: 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+}
