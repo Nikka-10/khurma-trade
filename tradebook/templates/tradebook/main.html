@@ -95,39 +95,61 @@
         <div class="deal-side">
             <button id="toggleBtn">+ Add Deal</button>
 
-            <form method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
+            <form method="POST"
+                  action="{% url 'tradebook:upload_csv' %}"
+                  enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="file" name="csv_file" accept=".csv">
                 <button type="submit">Upload CSV</button>
             </form>
 
             {% if result %}
-                {% if result.file_error %}
-                    <p style="color: red">{{ result.file_error }}</p>
-                {% else %}
-                    <p style="color: green">Successfully imported: {{ result.created }} deals</p>
+            <section class="import-result" role="status">
 
-                    {% if result.skipped %}
-                        <p>Skipped {{ result.skipped|length }} rows:</p>
-                        <table>
-                            <thead>
-                                <tr><th>Row</th><th>Errors</th></tr>
-                            </thead>
-                            <tbody>
-                                {% for skip in result.skipped %}
-                                <tr>
-                                    <td>{{ skip.row }}</td>
-                                    <td>
-                                        {% for error in skip.errors %}
-                                            <p>{{ error }}</p>
-                                        {% endfor %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                {% if result.file_error %}
+
+                    <p class="form-error">
+                        {{ result.file_error }}
+                    </p>
+
+                {% else %}
+
+                    <p>
+                        Successfully imported
+                        <strong>{{ result.created }}</strong>
+                        {{ result.kind }} record(s).
+
+                        {% if result.kind == 'exchange' %}
+                            ({{ result.item_lines }} item lines)
+                        {% endif %}
+                    </p>
+
+                    {% if result.skipped_count %}
+                        <p>
+                            Skipped {{ result.skipped_count }}
+                            {{ result.kind }} record(s).
+                        </p>
                     {% endif %}
+
+                    {% for warning in result.warnings %}
+                        <p class="form-warning">
+                            {{ warning }}
+                        </p>
+                    {% endfor %}
+
+                    {% for entry in result.skipped %}
+                        <div class="form-error">
+                            <strong>CSV line {{ entry.row }}</strong>
+
+                            {% for error in entry.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
                 {% endif %}
+
+            </section>
             {% endif %}
 
             <!-- ADD PANEL: Trade / Exchange -->

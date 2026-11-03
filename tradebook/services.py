@@ -7,7 +7,7 @@ from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
 from .models import TradeBook, Tag, Exchange, ExchangeItems
 from decimal import Decimal
-from .importers.import_csv import ImporterForCsv
+from .importers.csv_importer import ImporterForCsv
 from django.db.models import Prefetch
 
 

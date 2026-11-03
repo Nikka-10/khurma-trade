@@ -201,15 +201,39 @@ def delete_tag(request):
 
 @login_required(login_url=login_url)
 @need_base_access
+@require_POST
 def upload_csv(request):
-    if request.method == 'POST':
-        csv_file = request.FILES.get('csv_file')
-        if not csv_file:
-            return redirect('tradebook:tradebook')
-        result = services.import_csv(request.user, csv_file)
+    csv_file = request.FILES.get('csv_file')
 
-        return render_main(request, extra_context={'result':result})
-    return redirect('tradebook:tradebook')
+    if not csv_file:
+        return render_main(request, {
+            'result': {
+                'file_error': 'Please choose a CSV file.'
+            },
+        })
+
+    try:
+        result = services.import_csv(
+            request.user,
+            csv_file,
+        )
+
+    except DatabaseError:
+        logger.exception(
+            'CSV import failed for user_id=%s',
+            request.user.pk,
+        )
+
+        result = {
+            'file_error': (
+                'A database error occurred. '
+                'No records from this upload were saved.'
+            ),
+        }
+
+    return render_main(request, {
+        'result': result,
+    })
 
 
 @login_required(login_url=login_url)
