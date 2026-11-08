@@ -20,17 +20,25 @@ def _validate_marketplace(
     marketplace = cleaned_data.get(marketplace_field)
     custom_name = (cleaned_data.get(custom_field) or '').strip()
 
-    if marketplace and custom_name:
-        form.add_error(
-            custom_field,
-            'Choose a listed marketplace OR enter a custom name, not both.'
-        )
+    is_custom = (
+        marketplace is not None
+        and marketplace.name.strip().lower() == 'custom'
+    )
 
-    elif not marketplace and not custom_name and required:
-        form.add_error(
-            marketplace_field,
-            'Select a marketplace or enter a custom name.'
-        )
+    if is_custom:
+        if not custom_name:
+            form.add_error(custom_field,'Please enter the custom marketplace name.')
+
+    elif marketplace:
+        if custom_name:
+            form.add_error(custom_field,'Custom name is only allowed when Custom is selected.')
+
+    else:
+        if custom_name:
+            form.add_error(custom_field,'Select Custom before entering a marketplace name.')
+
+        elif required:
+            form.add_error(marketplace_field,'Please select a marketplace.')
 
     cleaned_data[custom_field] = custom_name
 

@@ -173,7 +173,7 @@ def edit_deal(request, deal_id):
     except DatabaseError:
         logger.exception("Failed to edit deal for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
-    return render_main(request, {'form': form})
+    return redirect('tradebook:tradebook')
 
 
 @login_required(login_url=login_url)
@@ -292,7 +292,7 @@ def edit_exchange(request):
     exchange_id = request.POST.get('exchange_id')
     exchange = get_object_or_404(Exchange, pk=exchange_id, user=user,)
     try:
-        form = ExchangeForm(request.POST, user=user, instance=exchange, prefix='ex')
+        form = ExchangeForm(request.POST, user=user, instance=exchange, prefix='edit_ex')
 
         if form.is_valid():
             edited = services.edit_exchange(form)
