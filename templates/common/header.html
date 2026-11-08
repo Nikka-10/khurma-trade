@@ -1,0 +1,48 @@
+{% url 'subscriptions:plans' as subscriptions_url %}
+{% url 'tracking:tracking' as tracking_url %}
+<header class="site-header" id="top">
+    <div class="header-inner container">
+        <a class="brand" href="/" aria-label="TradeBook main page">
+            <span class="brand-symbol" aria-hidden="true"><span class="brand-slash">/</span><span class="brand-dot"></span></span>
+            <span class="brand-type">TRADE<span>BOOK</span></span>
+            <span class="brand-version">2.1</span>
+        </a>
+        <nav class="primary-nav" aria-label="Site navigation">
+            <a href="/" class="nav-link {% if request.path == '/' %}nav-link-current{% endif %}">Home</a>
+            <a href="{% if tracking_url %}{{ tracking_url }}{% else %}/tracking/{% endif %}" class="nav-link {% if request.resolver_match.namespace == 'tracking' %}nav-link-current{% endif %}">Tracking</a>
+            <a href="{% url 'tradebook:tradebook' %}" class="nav-link {% if request.resolver_match.namespace == 'tradebook' %}nav-link-current{% endif %}">TradeBook</a>
+            <a href="{% if subscriptions_url %}{{ subscriptions_url }}{% else %}/subscriptions/{% endif %}" class="nav-link {% if request.resolver_match.namespace == 'subscriptions' %}nav-link-current{% endif %}">Subscriptions</a>
+            <a href="/#contact" class="nav-link">Contact</a>
+        </nav>
+        <div class="header-account">
+            {% if user.is_authenticated %}
+                <span class="online-indicator" aria-hidden="true"></span>
+                <span class="header-username">{{ user.username }}</span>
+                <details class="account-menu">
+                    <summary class="account-trigger" aria-label="Account menu"><span class="account-avatar">{{ user.username|slice:':1'|upper }}</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+                    <div class="account-popover">
+                        <div class="account-popover-title">Signed in as <strong>{{ user.username }}</strong></div>
+                        <form action="{% url 'users:toggle_2fa' %}" method="POST">
+                            {% csrf_token %}
+                            <span class="account-popover-caption">Two-factor authentication: {% if user.two_fa_enabled %}On{% else %}Off{% endif %}</span>
+                            <button class="account-action" type="submit">{% if user.two_fa_enabled %}Disable 2FA{% else %}Enable 2FA{% endif %}</button>
+                        </form>
+                        <a class="account-action account-signout" href="{% url 'users:logout' %}">Sign out <span aria-hidden="true">↗</span></a>
+                    </div>
+                </details>
+            {% else %}
+                <a class="header-login" href="/login/">Sign in <span aria-hidden="true">↗</span></a>
+            {% endif %}
+            <details class="mobile-nav">
+                <summary class="mobile-nav-trigger" aria-label="Open site navigation"><span></span><span></span><span></span></summary>
+                <nav class="mobile-nav-panel" aria-label="Mobile site navigation">
+                    <a href="/">Home</a>
+                    <a href="{% if tracking_url %}{{ tracking_url }}{% else %}/tracking/{% endif %}">Tracking</a>
+                    <a href="{% url 'tradebook:tradebook' %}">TradeBook</a>
+                    <a href="{% if subscriptions_url %}{{ subscriptions_url }}{% else %}/subscriptions/{% endif %}">Subscriptions</a>
+                    <a href="/#contact">Contact</a>
+                </nav>
+            </details>
+        </div>
+    </div>
+</header>

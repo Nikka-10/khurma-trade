@@ -1,3 +1,5 @@
+import decimal
+
 from django.utils import timezone
 from django import forms
 from decimal import Decimal, InvalidOperation
@@ -5,6 +7,41 @@ from django.core.exceptions import ValidationError
 from items.models import Item
 from .models import TradeBook, Tag, Exchange, ExchangeItems
 from django.forms import inlineformset_factory
+
+
+
+def _validate_marketplace(
+    form,
+    cleaned_data,
+    marketplace_field,
+    custom_field,
+    required=False,
+):
+    marketplace = cleaned_data.get(marketplace_field)
+    custom_name = (cleaned_data.get(custom_field) or '').strip()
+
+    is_custom = (
+        marketplace is not None
+        and marketplace.name.strip().lower() == 'custom'
+    )
+
+    if is_custom:
+        if not custom_name:
+            form.add_error(custom_field,'Please enter the custom marketplace name.')
+
+    elif marketplace:
+        if custom_name:
+            form.add_error(custom_field,'Custom name is only allowed when Custom is selected.')
+
+    else:
+        if custom_name:
+            form.add_error(custom_field,'Select Custom before entering a marketplace name.')
+
+        elif required:
+            form.add_error(marketplace_field,'Please select a marketplace.')
+
+    cleaned_data[custom_field] = custom_name
+
 
 class TradeForm(forms.ModelForm):
     class Meta:
@@ -56,16 +93,26 @@ class TradeForm(forms.ModelForm):
         else:
             self.fields['tags'].queryset = Tag.objects.none()
 
+        self.fields['quantity'].required = False
+
+        if not self.is_bound and not self.instance.pk:
+            self.fields['quantity'].initial = 1
+
 
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
 
         if quantity is None:
-            raise ValidationError("Quantity is required.")
-        if quantity <= 0:
-            raise ValidationError("Quantity must be greater than zero.")
-        if quantity > 100:
-            raise ValidationError("Let's be realistic brother XD, Quantity cannot be greater than 100.")
+            if self.instance.pk:
+                quantity = self.instance.quantity
+            else:
+                quantity = 1
+
+        if not 1 <= quantity <= 100:
+            raise ValidationError(
+                'Quantity must be between 1 and 100.'
+            )
+
         return quantity
 
     def clean_purchase_price(self):
@@ -101,8 +148,6 @@ class TradeForm(forms.ModelForm):
         sell_price = cleaned_data.get('sell_price')
         purchase_date = cleaned_data.get('purchase_date')
         sell_date = cleaned_data.get('sell_date')
-        sell_mplace = cleaned_data.get('sell_marketplace')
-        sell_custom = cleaned_data.get('sell_marketplace_custom')
         status = cleaned_data.get('status')
 
         if purchase_date and sell_date and sell_date < purchase_date:
@@ -112,13 +157,21 @@ class TradeForm(forms.ModelForm):
             status = 'sold'
             cleaned_data['status'] = status
 
-        if status == 'sold':
-            if not sell_date:
-                self.add_error('sell_date', 'Required when status is sold.')
-            if not sell_price:
-                self.add_error('sell_price', 'Required when status is sold.')
-            if not sell_mplace and not sell_custom:
-                self.add_error('sell_marketplace', 'Required when status is sold.')
+        _validate_marketplace(
+            self,
+            cleaned_data,
+            'purchase_marketplace',
+            'purchase_marketplace_custom',
+            required=True,
+        )
+
+        _validate_marketplace(
+            self,
+            cleaned_data,
+            'sell_marketplace',
+            'sell_marketplace_custom',
+            required=cleaned_data.get('status') == 'sold',
+        )
 
         return cleaned_data
 
@@ -179,6 +232,19 @@ class ExchangeForm(forms.ModelForm):
         if len(notes) > 100:
             raise ValidationError("Notes are too long (max 100 characters).")
         return notes
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        _validate_marketplace(
+            self,
+            cleaned_data,
+            'marketplace',
+            'marketplace_custom',
+            required=True,
+        )
+
+        return cleaned_data
 
 
 

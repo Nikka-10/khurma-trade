@@ -4,261 +4,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta name="theme-color" content="#0e1012">
+    <title>TradeBook — Overview</title>
     <link rel="stylesheet" href="{% static 'tradebook/style.css' %}">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-
-    <title>Tradebook</title>
 </head>
 <body>
-
-<div class="container">
-
-    <h1>📊 Tradebook</h1>
-    <h2>{{ user.username }}</h2>
-    <form action="{% url 'users:logout' %}">
-        <button type="submit" class="logout">Logout</button>
-    </form>
-    <form method="POST" action="{% url 'users:toggle_2fa' %}">
-        {% csrf_token %}
-        {% if user.two_fa_enabled %}
-            <p>2FA is <strong style="color:green">enabled</strong></p>
-            <button type="submit">Disable 2FA</button>
-        {% else %}
-            <p>2FA is <strong style="color:red">disabled</strong></p>
-            <button type="submit">Enable 2FA</button>
-        {% endif %}
-    </form>
-    <br><br>
-
-    <!-- CREATE TAG -->
-    <form method="post" action="{% url 'tradebook:create_tag' %}">
-        {% csrf_token %}
-        {{ tag_form }}
-        <br>
-        <button type="submit">Create Tag</button>
-    </form>
-    <br>
-
-    <!-- MAIN LAYOUT -->
-    <div class="main-layout">
-
-        <!-- SIDEBAR -->
-        <div class="sidebar">
-
-            <h3>📁 Tags</h3>
-
-            <a hx-get="{% url 'tradebook:tradebook' %}"
-               hx-vals="js:{mode: currentMode()}"
-               hx-target="#deals"
-               hx-push-url="true">
-                All
-            </a>
-
-            {% for tag in tags %}
-            <div style="display:inline-flex; align-items:center; gap:6px; margin-right:8px;">
-
-                <a href="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
-                   hx-get="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}"
-                   hx-vals="js:{mode: currentMode()}"
-                   hx-target="#deals"
-                   hx-push-url="true"
-                   style="text-decoration:none;">
-                    {{ tag.tag }}
-                </a>
-
-                <form method="POST" action="{% url 'tradebook:delete_tag' %}" style="margin:0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="tag" value="{{ tag.id }}">
-                    <button type="submit"
-                        style="background:none; border:none; cursor:pointer; padding:0; font-size:16px;">
-                        <span>🗑️</span>
-                    </button>
-                </form>
-
-            </div>
-            {% endfor %}
-
-            <h3>📅 By Month</h3>
-
-            {% for m in months %}
-                <a hx-get="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}"
-                   hx-vals="js:{mode: currentMode()}"
-                   hx-target="#deals"
-                   hx-push-url="true">
-                    {{ m.month|date:"F Y" }}
-                </a>
-            {% endfor %}
-
+{% include 'common/header.html' %}
+<main class="container app-shell">
+    <section class="hero" id="overview" aria-labelledby="hero-title">
+        <div class="hero-copy">
+            <span class="eyebrow"><span class="eyebrow-line"></span> YOUR TRADING WORKSPACE</span>
+            <h1 id="hero-title">Every trade.<br><em>In perspective.</em></h1>
+            <p>Keep your inventory, exchanges and performance in one place.</p>
+            <a class="hero-link" href="#records">Explore your ledger <span aria-hidden="true">↗</span></a>
         </div>
+        <div class="hero-visual" aria-hidden="true">
+            <div class="visual-ring visual-ring-one"></div>
+            <div class="visual-ring visual-ring-two"></div>
+            <div class="visual-ring visual-ring-three"></div>
+            <div class="visual-letter">T<span>/</span></div>
+            <div class="visual-corner visual-corner-top">01 / PORTFOLIO</div>
+            <div class="visual-corner visual-corner-bottom">KEEP THE EDGE.</div>
+        </div>
+    </section>
 
-        <div class="deal-side">
-            <button id="toggleBtn">+ Add Deal</button>
+    <section class="overview-grid" aria-label="Trading overview">
+        <article class="metric-card metric-card-primary">
+            <div class="metric-top"><span>Trade profit</span><span class="metric-mark">↗</span></div>
+            <div class="metric-value">${{ whole_profit|floatformat:2 }}</div>
+            <div class="metric-foot">From your current trade selection</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><span>Estimated exchange profit</span><span class="metric-mark">◇</span></div>
+            <div class="metric-value {% if show_exchanges and exchange_profit > 0 %}profit-pos{% elif show_exchanges and exchange_profit < 0 %}profit-neg{% endif %}">{% if show_exchanges %}${{ exchange_profit|floatformat:2|default:'0.00' }}{% else %}—{% endif %}</div>
+            <div class="metric-foot">{% if show_exchanges %}Your recorded estimates{% else %}Switch to Exchanges to view{% endif %}</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><span>Trades in view</span><span class="metric-mark">↗</span></div>
+            <div class="metric-value">{% if show_trades %}{{ deals|length }}{% else %}—{% endif %}</div>
+            <div class="metric-foot">Records in the current selection</div>
+        </article>
+        <article class="metric-card">
+            <div class="metric-top"><span>Exchanges in view</span><span class="metric-mark">↔</span></div>
+            <div class="metric-value">{% if show_exchanges %}{{ exchanges|length }}{% else %}—{% endif %}</div>
+            <div class="metric-foot">Exchanges in the current selection</div>
+        </article>
+    </section>
 
-            <form method="POST"
-                  action="{% url 'tradebook:upload_csv' %}"
-                  enctype="multipart/form-data">
+    <div class="main-layout">
+        <aside class="sidebar" id="tags" aria-label="Tags and filters">
+            <div class="sidebar-head"><span class="eyebrow eyebrow-muted">WORKSPACE</span><h2>Organize</h2><p>Find what matters.</p></div>
+            <form class="tag-create" method="POST" action="{% url 'tradebook:create_tag' %}">
                 {% csrf_token %}
-                <input type="file" name="csv_file" accept=".csv">
-                <button type="submit">Upload CSV</button>
+                <label class="sidebar-label" for="{{ tag_form.tag.id_for_label }}">New tag</label>
+                <div class="tag-create-input">{{ tag_form.tag }}<button type="submit" aria-label="Create tag">+</button></div>
+                {{ tag_form.tag.errors }}
+                {{ tag_form.non_field_errors }}
             </form>
-
-            {% if result %}
-            <section class="import-result" role="status">
-
-                {% if result.file_error %}
-
-                    <p class="form-error">
-                        {{ result.file_error }}
-                    </p>
-
-                {% else %}
-
-                    <p>
-                        Successfully imported
-                        <strong>{{ result.created }}</strong>
-                        {{ result.kind }} record(s).
-
-                        {% if result.kind == 'exchange' %}
-                            ({{ result.item_lines }} item lines)
-                        {% endif %}
-                    </p>
-
-                    {% if result.skipped_count %}
-                        <p>
-                            Skipped {{ result.skipped_count }}
-                            {{ result.kind }} record(s).
-                        </p>
-                    {% endif %}
-
-                    {% for warning in result.warnings %}
-                        <p class="form-warning">
-                            {{ warning }}
-                        </p>
-                    {% endfor %}
-
-                    {% for entry in result.skipped %}
-                        <div class="form-error">
-                            <strong>CSV line {{ entry.row }}</strong>
-
-                            {% for error in entry.errors %}
-                                <div>{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endfor %}
-
-                {% endif %}
-
-            </section>
-            {% endif %}
-
-            <!-- ADD PANEL: Trade / Exchange -->
-            <div id="formContainer" class="{% if not open_tab %}hidden{% endif %}">
-
-                <div class="segmented" style="--n:2">
-                    <input type="radio" name="form_tab" id="tab-trade" value="trade"
-                           {% if open_tab != 'exchange' %}checked{% endif %}
-                           onchange="showFormTab(this.value)">
-                    <label for="tab-trade">Trade</label>
-
-                    <input type="radio" name="form_tab" id="tab-exchange" value="exchange"
-                           {% if open_tab == 'exchange' %}checked{% endif %}
-                           onchange="showFormTab(this.value)">
-                    <label for="tab-exchange">Exchange</label>
-
-                    <span class="thumb"></span>
-                </div>
-
-                <div id="trade-form-box" class="{% if open_tab == 'exchange' %}hidden{% endif %}">
-                    <form method="POST" action="{% url 'tradebook:create_deal' %}">
+            <div class="sidebar-group">
+                <div class="sidebar-label">Tags <span class="sidebar-count">{{ tags|length }}</span></div>
+                <a class="filter-link {% if not request.GET.tag and not request.GET.date %}active{% endif %}" data-tag-filter="" data-clear-all="true"
+                   href="{% url 'tradebook:tradebook' %}?mode={{ request.GET.mode|default:'all' }}"
+                   hx-get="{% url 'tradebook:tradebook' %}"
+                   hx-vals="js:{...filterParams({tag: null, date: null})}"
+                   hx-target="#deals" hx-push-url="true">
+                    <span class="filter-glyph" aria-hidden="true">▦</span><span>All records</span><span class="filter-arrow" aria-hidden="true">↗</span>
+                </a>
+                {% for tag in tags %}
+                <div class="tag-entry">
+                    <a class="filter-link {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}"
+                       data-tag-filter="{{ tag.id }}"
+                       href="{% url 'tradebook:tradebook' %}?tag={{ tag.id }}{% if request.GET.date %}&amp;date={{ request.GET.date|urlencode }}{% endif %}&amp;mode={{ request.GET.mode|default:'all' }}"
+                       hx-get="{% url 'tradebook:tradebook' %}"
+                       hx-vals="js:{...filterParams({tag: '{{ tag.id }}'})}" hx-target="#deals" hx-push-url="true">
+                        <span class="filter-glyph" aria-hidden="true">#</span><span class="tag-name">{{ tag.tag }}</span>
+                    </a>
+                    <form method="POST" action="{% url 'tradebook:delete_tag' %}" class="tag-delete-form">
                         {% csrf_token %}
-                        {% include 'items/partials/search_bar.html' with search_url="/trade/search_items/" %}
-                        {{ form }}
-                        {{ form.errors }}
-                        <button type="submit">Save Deal</button>
+                        <input type="hidden" name="tag" value="{{ tag.id }}">
+                        <button type="submit" class="icon-button remove-tag" aria-label="Delete tag {{ tag.tag }}" title="Delete tag">×</button>
                     </form>
                 </div>
+                {% empty %}
+                <p class="sidebar-placeholder">No tags yet.</p>
+                {% endfor %}
+            </div>
+            <div class="sidebar-group sidebar-months">
+                <div class="sidebar-label">By month</div>
+                <a class="month-link {% if not request.GET.date %}active{% endif %}"
+                   data-month-filter=""
+                   href="{% url 'tradebook:tradebook' %}?{% if request.GET.tag %}tag={{ request.GET.tag|urlencode }}&amp;{% endif %}mode={{ request.GET.mode|default:'all' }}"
+                   hx-get="{% url 'tradebook:tradebook' %}"
+                   hx-vals="js:{...filterParams({date: null})}"
+                   hx-target="#deals" hx-push-url="true">All months <span aria-hidden="true">↗</span></a>
+                {% for m in months %}
+                <a class="month-link {% if request.GET.date == m.month|date:'Y-m' %}active{% endif %}"
+                   data-month-filter="{{ m.month|date:'Y-m' }}"
+                   href="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}{% if request.GET.tag %}&amp;tag={{ request.GET.tag|urlencode }}{% endif %}&amp;mode={{ request.GET.mode|default:'all' }}"
+                   hx-get="{% url 'tradebook:tradebook' %}"
+                   hx-vals="js:{...filterParams({date: '{{ m.month|date:'Y-m' }}'})}"
+                   hx-target="#deals" hx-push-url="true">
+                    {{ m.month|date:'F Y' }} <span aria-hidden="true">↗</span>
+                </a>
+                {% empty %}
+                <p class="sidebar-placeholder">No months available.</p>
+                {% endfor %}
+            </div>
+            <div class="sidebar-help"><span class="sidebar-help-icon">✦</span><p>Small details.<br>Better decisions.</p></div>
+        </aside>
 
-                <div id="exchange-form-box" class="{% if open_tab != 'exchange' %}hidden{% endif %}">
-                    {% include 'tradebook/partials/exchange_form.html' %}
+        <div class="deal-side">
+            <section class="workspace-panel" id="import" aria-labelledby="workspace-title">
+                <div class="workspace-heading">
+                    <div><span class="eyebrow eyebrow-muted">QUICK ACTIONS</span><h2 id="workspace-title">Manage your portfolio</h2><p>Add transactions or import your history.</p></div>
+                    <button id="toggleBtn" type="button" class="primary-button" aria-expanded="{% if open_tab %}true{% else %}false{% endif %}" aria-controls="formContainer"><span class="button-plus" aria-hidden="true">+</span> Add transaction</button>
                 </div>
-            </div>
+                <form class="upload-form" method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="upload-icon" aria-hidden="true">↑</div>
+                    <div class="upload-copy"><strong>Import existing data</strong><span>Upload a CSV file with trades or exchanges</span></div>
+                    <label class="file-upload-label"><span class="sr-only">Choose CSV file</span><input type="file" name="csv_file" accept=".csv" required></label>
+                    <button type="submit" class="secondary-button">Import file <span aria-hidden="true">↗</span></button>
+                </form>
 
-            <!-- VIEW SWITCH: Trades / Exchanges / All -->
-            <div class="segmented" id="mode-switch" style="--n:3">
-                <input type="radio" name="mode" id="mode-trade" value="trade"
-                       {% if mode == 'trade' %}checked{% endif %}
-                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
-                       hx-push-url="true" hx-vals="js:{...modeParams('trade')}">
-                <label for="mode-trade">Trades</label>
+                {% if result %}
+                <section class="import-result" role="status" aria-live="polite">
+                    {% if result.file_error %}
+                        <div class="form-error">{{ result.file_error }}</div>
+                    {% else %}
+                        <div class="import-result-title"><span class="result-check" aria-hidden="true">✓</span><strong>Imported {{ result.created }} {{ result.kind }} record{{ result.created|pluralize }}</strong>{% if result.kind == 'exchange' %}<span>{{ result.item_lines }} item lines</span>{% endif %}</div>
+                        {% if result.skipped_count %}<p class="form-warning">Skipped {{ result.skipped_count }} record(s). Details below.</p>{% endif %}
+                        {% for warning in result.warnings %}<p class="form-warning">{{ warning }}</p>{% endfor %}
+                        {% for entry in result.skipped %}
+                        <div class="form-error"><strong>Row {{ entry.row }}</strong>{% for error in entry.errors %}<div>{{ error }}</div>{% endfor %}</div>
+                        {% endfor %}
+                    {% endif %}
+                </section>
+                {% endif %}
 
-                <input type="radio" name="mode" id="mode-exchange" value="exchange"
-                       {% if mode == 'exchange' %}checked{% endif %}
-                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
-                       hx-push-url="true" hx-vals="js:{...modeParams('exchange')}">
-                <label for="mode-exchange">Exchanges</label>
+                <div id="formContainer" class="form-container {% if not open_tab %}hidden{% endif %}">
+                    <div class="form-panel-header"><h3>New transaction</h3><span>Choose a type below</span></div>
+                    <div class="segmented" style="--n:2">
+                        <input type="radio" name="form_tab" id="tab-trade" value="trade" {% if open_tab != 'exchange' %}checked{% endif %} onchange="showFormTab(this.value)">
+                        <label for="tab-trade">Trade</label>
+                        <input type="radio" name="form_tab" id="tab-exchange" value="exchange" {% if open_tab == 'exchange' %}checked{% endif %} onchange="showFormTab(this.value)">
+                        <label for="tab-exchange">Exchange</label>
+                        <span class="thumb"></span>
+                    </div>
+                    <div id="trade-form-box" class="form-box {% if open_tab == 'exchange' %}hidden{% endif %}">
+                        {% if deal_error %}<div class="form-error">{{ deal_error }}</div>{% endif %}
+                        <form method="POST" action="{% url 'tradebook:create_deal' %}" class="create-form">
+                            {% csrf_token %}
+                            {% include 'items/partials/search_bar.html' with search_url='/trade/search_items/' %}
+                            {{ form }}
+                            {{ form.errors }}
+                            <button type="submit" class="primary-button">Save trade <span aria-hidden="true">↗</span></button>
+                        </form>
+                    </div>
+                    <div id="exchange-form-box" class="form-box {% if open_tab != 'exchange' %}hidden{% endif %}">
+                        {% if exchange_error %}<div class="form-error">{{ exchange_error }}</div>{% endif %}
+                        {% include 'tradebook/partials/exchange_form.html' %}
+                    </div>
+                </div>
+            </section>
 
-                <input type="radio" name="mode" id="mode-all" value="all"
-                       {% if mode == 'all' %}checked{% endif %}
-                       hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals"
-                       hx-push-url="true" hx-vals="js:{...modeParams('all')}">
-                <label for="mode-all">All</label>
-
-                <span class="thumb"></span>
-            </div>
-
-            <!-- DEALS + EXCHANGES -->
-            <div id="deals" class="deals-container">
-                {% include 'tradebook/partials/deals.html' %}
-            </div>
-
+            <section class="records-panel" id="records" aria-labelledby="records-title">
+                <div class="records-heading"><div><span class="eyebrow eyebrow-muted">YOUR ACTIVITY</span><h2 id="records-title">Transaction ledger</h2><p>Review, filter and manage your records.</p></div><span class="records-decoration" aria-hidden="true">↗</span></div>
+                <div class="records-tabs">
+                    <span class="records-tabs-label">SHOW</span>
+                    <div class="segmented" id="mode-switch" style="--n:3">
+                        <input type="radio" name="mode" id="mode-trade" value="trade" {% if request.GET.mode == 'trade' %}checked{% endif %} hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals" hx-push-url="true" hx-vals="js:{...modeParams('trade')}">
+                        <label for="mode-trade">Trades</label>
+                        <input type="radio" name="mode" id="mode-exchange" value="exchange" {% if request.GET.mode == 'exchange' %}checked{% endif %} hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals" hx-push-url="true" hx-vals="js:{...modeParams('exchange')}">
+                        <label for="mode-exchange">Exchanges</label>
+                        <input type="radio" name="mode" id="mode-all" value="all" {% if request.GET.mode != 'trade' and request.GET.mode != 'exchange' %}checked{% endif %} hx-get="{% url 'tradebook:tradebook' %}" hx-trigger="change" hx-target="#deals" hx-push-url="true" hx-vals="js:{...modeParams('all')}">
+                        <label for="mode-all">All activity</label>
+                        <span class="thumb"></span>
+                    </div>
+                </div>
+                <div id="deals" class="deals-container">
+                    {% include 'tradebook/partials/deals.html' %}
+                </div>
+            </section>
         </div>
     </div>
-</div>
-
+</main>
+{% include 'common/footer.html' %}
 <script>
-const btn = document.getElementById("toggleBtn");
-const formContainer = document.getElementById("formContainer");
-
-btn.addEventListener("click", () => {
-    formContainer.classList.toggle("hidden");
-});
-
-// NOTES TOGGLE
-function toggleNotes(id) {
-    document.getElementById("notes-" + id).classList.toggle("hidden");
+const btn = document.getElementById('toggleBtn');
+const formContainer = document.getElementById('formContainer');
+if (btn && formContainer) {
+    btn.addEventListener('click', () => {
+        formContainer.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', String(!formContainer.classList.contains('hidden')));
+        if (!formContainer.classList.contains('hidden')) formContainer.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    });
 }
-
-// SELECT ALL
-document.addEventListener("DOMContentLoaded", () => {
-    const selectAll = document.querySelector('input[name="select_all"]');
-    if (selectAll) {
-        selectAll.addEventListener('change', function () {
-            document.querySelectorAll('input[name="selected_deals"]').forEach(cb => {
-                cb.checked = selectAll.checked;
-            });
-        });
+function toggleNotes(id) {
+    const el = document.getElementById('notes-' + id);
+    if (el) el.classList.toggle('hidden');
+}
+function toggleEdit(id) {
+    const el = document.getElementById('edit-' + id);
+    if (el) {
+        el.classList.toggle('hidden');
+        if (!el.classList.contains('hidden')) el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     }
-});
-
-// --- view switch helpers ---
+}
+function toggleAll(source) {
+    document.querySelectorAll('input[name="selected_deals"][form="bulk-delete-form"]').forEach(cb => cb.checked = source.checked);
+}
+function toggleExchangeNotes(id) {
+    const row = document.getElementById('exchange-notes-' + id);
+    if (!row) return;
+    row.classList.toggle('hidden');
+    const button = document.querySelector('[aria-controls="exchange-notes-' + id + '"]');
+    if (button) button.setAttribute('aria-expanded', String(!row.classList.contains('hidden')));
+}
+function toggleExchangeEdit(id) {
+    const row = document.getElementById('exchange-edit-' + id);
+    if (!row) return;
+    row.classList.toggle('hidden');
+    const button = document.querySelector('[aria-controls="exchange-edit-' + id + '"]');
+    if (button) button.setAttribute('aria-expanded', String(!row.classList.contains('hidden')));
+    if (!row.classList.contains('hidden')) row.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+function toggleAllExchanges(source) {
+    const section = source.closest('.exchange-section');
+    if (!section) return;
+    section.querySelectorAll('input[name="exchange_id"][form="bulk-delete-exchanges-form"]').forEach(cb => cb.checked = source.checked);
+    const warning = document.getElementById('exchange-bulk-warning');
+    if (warning) warning.classList.add('hidden');
+}
+function confirmExchangeSelection() {
+    const checked = document.querySelectorAll('input[name="exchange_id"][form="bulk-delete-exchanges-form"]:checked');
+    const warning = document.getElementById('exchange-bulk-warning');
+    if (!checked.length) {
+        if (warning) warning.classList.remove('hidden');
+        return false;
+    }
+    if (warning) warning.classList.add('hidden');
+    return true;
+}
 function currentMode() {
     const checked = document.querySelector('#mode-switch input:checked');
     return checked ? checked.value : 'all';
 }
-function modeParams(mode) {                       // keeps ?tag= / ?date= from the URL
+function modeParams(mode) {
     const params = Object.fromEntries(new URLSearchParams(location.search));
     params.mode = mode;
     return params;
 }
-
-// --- add panel tabs ---
+function filterParams(changes) {
+    const params = Object.fromEntries(new URLSearchParams(window.location.search));
+    Object.entries(changes).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') delete params[key];
+        else params[key] = value;
+    });
+    params.mode = currentMode();
+    return params;
+}
+function syncSidebarFilters() {
+    const search = new URLSearchParams(window.location.search);
+    const tag = search.get('tag') || '';
+    const month = search.get('date') || '';
+    const clearAll = !tag && !month;
+    document.querySelectorAll('[data-tag-filter]').forEach(link => {
+        const active = link.hasAttribute('data-clear-all')
+            ? clearAll
+            : Boolean(tag) && link.dataset.tagFilter === tag;
+        link.classList.toggle('active', active);
+        if (active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    });
+    document.querySelectorAll('[data-month-filter]').forEach(link => {
+        const active = link.dataset.monthFilter === month;
+        link.classList.toggle('active', active);
+        if (active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    });
+}
+syncSidebarFilters();
+window.addEventListener('popstate', syncSidebarFilters);
+document.body.addEventListener('htmx:pushedIntoHistory', syncSidebarFilters);
+document.body.addEventListener('htmx:afterSettle', syncSidebarFilters);
 function showFormTab(tab) {
     document.getElementById('trade-form-box').classList.toggle('hidden', tab !== 'trade');
     document.getElementById('exchange-form-box').classList.toggle('hidden', tab !== 'exchange');
 }
-
-// --- exchange rows ---
 function addRow(side) {
     const total = document.getElementById(`id_${side}-TOTAL_FORMS`);
     const index = parseInt(total.value, 10);
@@ -266,25 +300,53 @@ function addRow(side) {
     const container = document.getElementById(`${side}-rows`);
     container.insertAdjacentHTML('beforeend', html);
     total.value = index + 1;
-    htmx.process(container.lastElementChild);     // activate the new row's hx-* attributes
+    if (window.htmx) htmx.process(container.lastElementChild);
 }
-
-// --- item picking: shared by the trade form and the exchange rows ---
+function removeExchangeRow(button) {
+    const container = button.closest('[id$="-rows"]');
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll('.item-row'));
+    if (rows.length <= 1) return;
+    button.closest('.item-row').remove();
+    const side = container.id.replace(/-rows$/, '');
+    Array.from(container.querySelectorAll('.item-row')).forEach((row, i) => {
+        row.querySelectorAll('[name], [id], [for], [hx-target]').forEach(el => {
+            ['name', 'id', 'for', 'hx-target'].forEach(attr => {
+                const val = el.getAttribute(attr);
+                if (val) el.setAttribute(attr, val.replace(new RegExp('(' + side + '-)\\d+(?=-|$)', 'g'), '$1' + i));
+            });
+        });
+    });
+    document.getElementById(`id_${side}-TOTAL_FORMS`).value = container.querySelectorAll('.item-row').length;
+}
 let activeRow = null;
 document.addEventListener('focusin', e => { activeRow = e.target.closest('.item-row'); });
-
 function selectItem(id, name) {
-    if (activeRow) {                              // an exchange row's search box is active
+    if (activeRow && document.contains(activeRow)) {
         activeRow.querySelector('.item-id').value = id;
         activeRow.querySelector('.item-search').value = name;
         activeRow.querySelector('.item-results').innerHTML = '';
         return;
     }
-    document.getElementById('id_item').value = id;   // original trade behaviour
-    document.getElementById('item-search').value = name;
-    document.getElementById('item-results').innerHTML = '';
+    const tradeItem = document.getElementById('id_item');
+    const tradeSearch = document.getElementById('item-search');
+    const tradeResults = document.getElementById('item-results');
+    if (tradeItem) tradeItem.value = id;
+    if (tradeSearch) tradeSearch.value = name;
+    if (tradeResults) tradeResults.innerHTML = '';
+}
+function syncMarketplaceGroup(select) {
+    const group = select.closest('.marketplace-group');
+    if (!group) return;
+    const field = group.querySelector('.custom-marketplace-field');
+    const input = field && field.querySelector('input');
+    if (!field || !input) return;
+    field.classList.toggle('hidden', Boolean(select.value));
+    if (select.value) input.value = '';
+}
+function selectItemFromResult(el) {
+    selectItem(el.dataset.itemId, el.dataset.itemName);
 }
 </script>
-
 </body>
 </html>

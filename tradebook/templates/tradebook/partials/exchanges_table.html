@@ -1,41 +1,184 @@
 {% if show_exchanges %}
-<h2>Exchanges</h2>
-<p>Estimated profit (your numbers): <strong>{{ exchange_profit|floatformat:2 }}$</strong></p>
+<section class="data-section exchange-section" aria-labelledby="exchange-section-title">
+    <div class="data-section-head">
+        <div>
+            <span class="eyebrow eyebrow-muted">02 / EXCHANGES</span>
+            <h3 id="exchange-section-title">Your exchanges</h3>
+            <p>What you gave, what you received.</p>
+        </div>
+        <div class="data-head-value">
+            <span>Estimated profit</span>
+            <strong class="{% if exchange_profit > 0 %}profit-pos{% elif exchange_profit < 0 %}profit-neg{% endif %}">${{ exchange_profit|floatformat:2 }}</strong>
+        </div>
+    </div>
 
-<table class="deals-table">
-    <thead>
-        <tr>
-            <th>Date</th><th>You gave</th><th>You received</th><th>Marketplace</th>
-            <th>Est. profit</th><th>Tags</th><th>Notes</th><th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for ex in exchanges %}
-        <tr>
-            <td>{{ ex.exchange_date }}</td>
-            <td>{% for l in ex.given_lines %}<div>{{ l.quantity }}× {{ l.item.name_on_market }}</div>{% endfor %}</td>
-            <td>{% for l in ex.received_lines %}<div>{{ l.quantity }}× {{ l.item.name_on_market }}</div>{% endfor %}</td>
-            <td>{{ ex.site }}</td>
-            <td>
-                {% if ex.estimated_profit is not None %}
-                    <span class="{% if ex.estimated_profit > 0 %}profit-pos{% elif ex.estimated_profit < 0 %}profit-neg{% endif %}">
-                        {{ ex.estimated_profit|floatformat:2 }}$
-                    </span>
-                {% else %}—{% endif %}
-            </td>
-            <td>{% for t in ex.tags.all %}<span class="tag-chip">{{ t.tag }}</span> {% endfor %}</td>
-            <td>{{ ex.notes|default:"—"|truncatechars:60 }}</td>
-            <td>
-                <form method="POST" action="{% url 'tradebook:delete_exchange' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="exchange_id" value="{{ ex.id }}">
-                    <button class="btn-danger" type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8">No exchanges found</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <div class="table-actions">
+        <span class="table-count"><span class="table-count-dot"></span>{{ exchanges|length }} exchanges</span>
+        <form method="POST" action="{% url 'tradebook:delete_exchange' %}" id="bulk-delete-exchanges-form" onsubmit="return confirmExchangeSelection()">
+            {% csrf_token %}
+            <button class="outline-danger" type="submit">Delete selected <span aria-hidden="true">×</span></button>
+        </form>
+        <span id="exchange-bulk-warning" class="bulk-warning hidden" role="alert">Select at least one exchange.</span>
+    </div>
+
+    <div class="table-scroll">
+        <table class="deals-table exchange-table">
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" onclick="toggleAllExchanges(this)" aria-label="Select all exchanges"></th>
+                    <th scope="col">Date</th>
+                    <th scope="col">You gave</th>
+                    <th scope="col">You received</th>
+                    <th scope="col">Marketplace</th>
+                    <th scope="col">Est. profit</th>
+                    <th scope="col">Tags</th>
+                    <th scope="col">Notes</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ex in exchanges %}
+                <tr class="deal-row">
+                    <td><input type="checkbox" name="exchange_id" value="{{ ex.id }}" form="bulk-delete-exchanges-form" aria-label="Select exchange {{ ex.id }}"></td>
+                    <td class="date-cell">{{ ex.exchange_date|date:'M d, Y' }}</td>
+                    <td class="exchange-items-cell">
+                        {% if ex.given_lines %}
+                            {% for line in ex.given_lines %}
+                                <div class="exchange-item-line"><span class="line-quantity">{{ line.quantity }}×</span>{{ line.item.name_on_market }}</div>
+                            {% endfor %}
+                        {% else %}
+                            {% for line in ex.lines.all %}
+                                {% if line.side == 'given' %}<div class="exchange-item-line"><span class="line-quantity">{{ line.quantity }}×</span>{{ line.item.name_on_market }}</div>{% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td class="exchange-items-cell">
+                        {% if ex.received_lines %}
+                            {% for line in ex.received_lines %}
+                                <div class="exchange-item-line"><span class="line-quantity">{{ line.quantity }}×</span>{{ line.item.name_on_market }}</div>
+                            {% endfor %}
+                        {% else %}
+                            {% for line in ex.lines.all %}
+                                {% if line.side == 'received' %}<div class="exchange-item-line"><span class="line-quantity">{{ line.quantity }}×</span>{{ line.item.name_on_market }}</div>{% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>{% if ex.marketplace %}{{ ex.marketplace }}{% elif ex.marketplace_custom %}{{ ex.marketplace_custom }}{% else %}—{% endif %}</td>
+                    <td class="{% if ex.estimated_profit > 0 %}profit-pos{% elif ex.estimated_profit < 0 %}profit-neg{% endif %}">
+                        {% if ex.estimated_profit is not None %}${{ ex.estimated_profit|floatformat:2 }}{% else %}—{% endif %}
+                    </td>
+                    <td class="tag-cell">{% for tag in ex.tags.all %}<span class="tag-chip">{{ tag.tag }}</span>{% empty %}—{% endfor %}</td>
+                    <td><button class="table-button" type="button" onclick="toggleExchangeNotes({{ ex.id }})" aria-controls="exchange-notes-{{ ex.id }}" aria-expanded="false">View</button></td>
+                    <td class="action-cell">
+                        <button class="table-button" type="button" onclick="toggleExchangeEdit({{ ex.id }})" aria-controls="exchange-edit-{{ ex.id }}" aria-expanded="{% if editing_exchange.id == ex.id %}true{% else %}false{% endif %}">Edit</button>
+                        <form method="POST" action="{% url 'tradebook:delete_exchange' %}" class="inline-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="exchange_id" value="{{ ex.id }}">
+                            <button class="table-button table-danger" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr id="exchange-notes-{{ ex.id }}" class="detail-row hidden">
+                    <td colspan="9">
+                        <div class="notes-box">
+                            <span class="detail-heading">EXCHANGE NOTES</span>
+                            <p>{{ ex.notes|default:'No notes added for this exchange.' }}</p>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="exchange-edit-{{ ex.id }}" class="detail-row {% if editing_exchange.id != ex.id %}hidden{% endif %}">
+                    <td colspan="9">
+                        <form method="POST" action="{% url 'tradebook:edit_exchange' %}" class="edit-form exchange-edit-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="exchange_id" value="{{ ex.id }}">
+                            <div class="edit-form-head">
+                                <div><span class="eyebrow eyebrow-muted">EDIT EXCHANGE</span><h4>Update exchange #{{ ex.id }}</h4></div>
+                                <button class="table-button" type="button" onclick="toggleExchangeEdit({{ ex.id }})">× Close</button>
+                            </div>
+                            {% if editing_exchange.id == ex.id and edit_exchange_error %}
+                                <div class="form-error">{{ edit_exchange_error }}</div>
+                            {% endif %}
+                            {% if editing_exchange.id == ex.id and edit_exchange_form %}
+                                {{ edit_exchange_form.non_field_errors }}
+                                <div class="form-grid form-grid-bound">
+                                    {% for field in edit_exchange_form %}
+                                        <div class="edit-field {% if field.is_hidden %}field-hidden{% endif %}">
+                                            {% if not field.is_hidden %}{{ field.label_tag }}{% endif %}
+                                            {{ field }}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="form-grid">
+                                    <label class="edit-field">Exchange date
+                                        <input type="date" name="edit_ex-exchange_date" value="{{ ex.exchange_date|date:'Y-m-d' }}" required>
+                                    </label>
+                                    <div class="marketplace-group">
+                                        <label class="edit-field">Marketplace
+                                            <select name="edit_ex-marketplace" onchange="syncMarketplaceGroup(this)">
+                                                <option value="" {% if not ex.marketplace_id %}selected{% endif %}>Custom / none</option>
+                                                {% for marketplace in marketplaces %}
+                                                    <option value="{{ marketplace.id }}" {% if marketplace.id == ex.marketplace_id %}selected{% endif %}>{{ marketplace.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label class="edit-field custom-marketplace-field {% if ex.marketplace_id %}hidden{% endif %}">Custom marketplace
+                                            <input type="text" name="edit_ex-marketplace_custom" value="{{ ex.marketplace_custom|default_if_none:'' }}" maxlength="100" placeholder="Marketplace name">
+                                        </label>
+                                    </div>
+                                    <label class="edit-field">Estimated profit
+                                        <input type="number" name="edit_ex-estimated_profit" step="0.01" value="{{ ex.estimated_profit|default_if_none:'' }}">
+                                    </label>
+                                    <label class="edit-field edit-field-wide">Notes
+                                        <textarea name="edit_ex-notes" rows="3" maxlength="100">{{ ex.notes|default_if_none:'' }}</textarea>
+                                    </label>
+                                    {% for tag in ex.tags.all %}<input type="hidden" name="edit_ex-tags" value="{{ tag.id }}">{% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <div class="exchange-edit-items">
+                                <h5>Item quantities</h5>
+                                <p>Edit quantities below. Changing the item itself or adding/removing item lines requires the exchange-item editing workflow.</p>
+                                <div class="exchange-edit-lines">
+                                    {% if editing_exchange.id == ex.id and edit_line_forms %}
+                                        {% for item_form in edit_line_forms %}
+                                            <label class="exchange-edit-line">
+                                                <span class="line-side">{{ item_form.instance.get_side_display }}</span>
+                                                <span class="line-item-name">{{ item_form.instance.item.name_on_market }}</span>
+                                                {{ item_form.item }}
+                                                <span class="line-qty-label">Qty</span>
+                                                {{ item_form.quantity }}
+                                                {{ item_form.quantity.errors }}
+                                            </label>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% for line in ex.lines.all %}
+                                            <label class="exchange-edit-line">
+                                                <span class="line-side">{{ line.get_side_display }}</span>
+                                                <span class="line-item-name">{{ line.item.name_on_market }}</span>
+                                                <input type="hidden" name="line-{{ line.pk }}-item" value="{{ line.item_id }}">
+                                                <span class="line-qty-label">Qty</span>
+                                                <input type="number" name="line-{{ line.pk }}-quantity" value="{{ line.quantity }}" min="1" max="100" step="1" required>
+                                            </label>
+                                        {% empty %}
+                                            <p class="form-warning">This exchange has no saved item lines.</p>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button class="primary-button" type="submit">Save changes <span aria-hidden="true">↗</span></button>
+                                <button class="secondary-button" type="button" onclick="toggleExchangeEdit({{ ex.id }})">Cancel</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="empty-state"><span class="empty-icon">↔</span><strong>No exchanges found</strong><span>Your exchanges will appear here.</span></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endif %}
