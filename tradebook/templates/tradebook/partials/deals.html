@@ -1,3 +1,8 @@
+{% if filter_error %}
+    <div class="form-error ledger-filter-error" role="alert">
+        {{ filter_error }}
+    </div>
+{% endif %}
 {% if show_trades %}
 <section class="data-section" aria-labelledby="trade-section-title">
     <div class="data-section-head">
@@ -74,13 +79,13 @@
                                     <label class="edit-field">Sell date<input type="date" name="sell_date" value="{{ deal.sell_date|date:'Y-m-d' }}"></label>
                                     <div class="marketplace-group">
                                         <label class="edit-field">Purchase marketplace
-                                            <select name="purchase_marketplace" onchange="syncMarketplaceGroup(this)"><option value="" {% if not deal.purchase_marketplace_id %}selected{% endif %}>Custom / none</option>{% for m in marketplaces %}<option value="{{ m.id }}" {% if m.id == deal.purchase_marketplace_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select>
+                                            <select name="purchase_marketplace" onchange="syncMarketplaceGroup(this)"><option value="" {% if not deal.purchase_marketplace_id %}selected{% endif %}>Select a marketplace</option>{% for m in marketplaces %}<option value="{{ m.id }}" {% if m.id == deal.purchase_marketplace_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select>
                                         </label>
                                         <label class="edit-field custom-marketplace-field {% if deal.purchase_marketplace_id %}hidden{% endif %}">Custom purchase marketplace<input type="text" name="purchase_marketplace_custom" value="{{ deal.purchase_marketplace_custom|default_if_none:'' }}" maxlength="100" placeholder="Marketplace name"></label>
                                     </div>
                                     <div class="marketplace-group">
                                         <label class="edit-field">Sell marketplace
-                                            <select name="sell_marketplace" onchange="syncMarketplaceGroup(this)"><option value="" {% if not deal.sell_marketplace_id %}selected{% endif %}>Custom / none</option>{% for m in marketplaces %}<option value="{{ m.id }}" {% if m.id == deal.sell_marketplace_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select>
+                                            <select name="sell_marketplace" onchange="syncMarketplaceGroup(this)"><option value="" {% if not deal.sell_marketplace_id %}selected{% endif %}>Not selected</option>{% for m in marketplaces %}<option value="{{ m.id }}" {% if m.id == deal.sell_marketplace_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select>
                                         </label>
                                         <label class="edit-field custom-marketplace-field {% if deal.sell_marketplace_id %}hidden{% endif %}">Custom sell marketplace<input type="text" name="sell_marketplace_custom" value="{{ deal.sell_marketplace_custom|default_if_none:'' }}" maxlength="100" placeholder="Marketplace name"></label>
                                     </div>

@@ -408,6 +408,192 @@ input[type='checkbox'] { accent-color: var(--yellow); cursor: pointer; }
 .home-contact h2 { margin: 4px 0 8px; font-size: 23px; }
 .home-contact p { color: var(--muted); margin: 0; font-size: 14px; }
 
+.ledger-filter-form {
+    margin: 20px 0 23px;
+    padding: 22px;
+    background: #1c1e20;
+    border: 1px solid #393c3e;
+    border-radius: 14px;
+}
+
+.ledger-filter-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.ledger-filter-caption,
+.ledger-filter-tip {
+    color: var(--muted, #a3a7a9);
+    font-size: 12px;
+}
+
+.ledger-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(190px, 1.35fr) repeat(4, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.ledger-filter-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    color: #d3d4d5;
+    font-weight: 650;
+}
+
+.ledger-filter-field input,
+.ledger-filter-field select {
+    display: block;
+    width: 100%;
+    height: 43px;
+    min-width: 0;
+    padding: 10px 11px;
+    background: #111315;
+    color: #f4f4f4;
+    border: 1px solid #434648;
+    border-radius: 9px;
+    box-sizing: border-box;
+    color-scheme: dark;
+    font-size: 13px;
+}
+
+.ledger-filter-field input:focus-visible,
+.ledger-filter-field select:focus-visible {
+    outline: 2px solid var(--yellow, #f6d454);
+    outline-offset: 1px;
+}
+
+.ledger-filter-field input::placeholder {
+    color: #777e83;
+}
+
+.ledger-filter-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 17px;
+    flex-wrap: wrap;
+}
+
+.ledger-filter-buttons {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.ledger-filter-buttons button {
+    min-height: 40px;
+}
+
+.ledger-filter-error {
+    margin: 0 0 16px;
+}
+
+@media (max-width: 1300px) {
+    .ledger-filter-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .ledger-filter-form {
+        padding: 16px;
+    }
+
+    .ledger-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ledger-filter-sort {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .ledger-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ledger-filter-sort {
+        grid-column: auto;
+    }
+
+    .ledger-filter-buttons {
+        width: 100%;
+    }
+
+    .ledger-filter-buttons button {
+        flex: 1;
+    }
+}
+
+
+.collapsible-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+}
+
+.collapsible-toggle .toggle-chevron {
+    transition: transform 0.18s ease;
+}
+
+.collapsible-toggle[aria-expanded="true"] .toggle-chevron {
+    transform: rotate(180deg);
+}
+
+.collapsible-toggle[aria-expanded="true"] {
+    border-color: var(--yellow, #f6d454);
+}
+
+.ledger-filter-toggle {
+    margin-left: auto;
+}
+
+.ledger-filter-panel {
+    padding: 18px 27px 2px;
+}
+
+.ledger-filter-panel .ledger-filter-form {
+    margin: 0 0 17px;
+}
+
+.filter-active-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--yellow, #f6d454);
+    display: none;
+}
+
+.ledger-filter-toggle.has-active-filters .filter-active-dot {
+    display: inline-block;
+}
+
+#import-csv-panel.hidden,
+#ledger-filter-panel.hidden {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    .ledger-filter-toggle {
+        margin-left: 0;
+    }
+
+    .ledger-filter-panel {
+        padding: 14px 16px 1px;
+    }
+}
+
+
 @media (max-width: 1240px) {
   .container { width: calc(100% - 40px); }
   .main-layout { grid-template-columns: 236px minmax(0,1fr); }
@@ -459,3 +645,25 @@ input[type='checkbox'] { accent-color: var(--yellow); cursor: pointer; }
     .exchange-edit-lines { grid-template-columns: 1fr; }
     .exchange-edit-form .form-grid { grid-template-columns: 1fr; }
 }
+
+.trade-form-layout { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.trade-form-section { min-width: 0; padding: 21px; border: 1px solid #383b3e; border-radius: 12px; background: #202224; }
+.trade-form-section-last { grid-column: 1 / -1; }
+.trade-section-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.trade-section-number { display: grid; place-items: center; min-width: 29px; height: 29px; border: 1px solid #635932; border-radius: 8px; background: #302b1c; color: var(--yellow); font-size: 11px; font-weight: 800; }
+.trade-section-head h4 { margin: 1px 0 4px; color: #f2f2f2; font-size: 16px; line-height: 1.3; }
+.trade-section-head p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.trade-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.trade-fields-item { grid-template-columns: minmax(0,2fr) minmax(105px,1fr); }
+.trade-field { min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.trade-field > label { color: #ced0d1; font-size: 12px; font-weight: 650; }
+.trade-field > input, .trade-field > select, .trade-field > textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.trade-field-wide { grid-column: 1 / -1; }
+.trade-field .errorlist { margin: 1px 0 0; }
+.trade-field-item .item-results { z-index: 80; }
+.trade-field-item input[type="search"], .trade-field-item input[type="text"] { width: 100%; }
+.trade-form-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; padding-top: 19px; border-top: 1px solid #373a3d; }
+.trade-form-footer > span { color: var(--muted); font-size: 12px; }
+.trade-form-footer > .primary-button { min-height: 42px; padding-inline: 23px; }
+@media (max-width: 1140px) { .trade-form-layout { grid-template-columns: minmax(0,1fr); } .trade-form-section-last { grid-column: auto; } }
+@media (max-width: 640px) { .trade-form-section { padding: 16px; } .trade-fields { grid-template-columns: minmax(0,1fr); gap: 13px; } .trade-fields-item { grid-template-columns: minmax(0,1fr); } .trade-form-footer > .primary-button { width: 100%; } }
