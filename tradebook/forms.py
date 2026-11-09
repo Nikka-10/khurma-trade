@@ -72,7 +72,17 @@ class TradeForm(forms.ModelForm):
             'sell_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'hold_till': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'tags': forms.CheckboxSelectMultiple(attrs={'class': 'tag-pills'})
+            'tags': forms.CheckboxSelectMultiple(attrs={'class': 'tag-pills'}),
+
+            'purchase_marketplace_custom': forms.TextInput(attrs={
+                'class': 'form-control custom-marketplace-input',
+                'placeholder': 'Enter custom purchase marketplace',
+            }),
+
+            'sell_marketplace_custom': forms.TextInput(attrs={
+                'class': 'form-control custom-marketplace-input',
+                'placeholder': 'Enter custom sell marketplace',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -215,6 +225,11 @@ class ExchangeForm(forms.ModelForm):
             'estimated_profit': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
             'tags': forms.CheckboxSelectMultiple(attrs={'class': 'tag-pills'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+
+            'marketplace_custom': forms.TextInput(attrs={
+                'class': 'form-control custom-marketplace-input',
+                'placeholder': 'Enter custom marketplace',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -289,3 +304,77 @@ ExchangeLineFormSet = inlineformset_factory(
     Exchange, ExchangeItems, form=ExchangeItemForm,
     extra=0, min_num=1, validate_min=True, can_delete=False,
 )
+
+
+class TradebookFilterForm(forms.Form):
+    SORT_CHOICES = [
+        ('newest', 'Newest first'),
+        ('oldest', 'Oldest first'),
+        ('profit_high', 'Highest profit'),
+        ('profit_low', 'Lowest profit'),
+    ]
+
+    sort = forms.ChoiceField(
+        choices=SORT_CHOICES,
+        required=False,
+    )
+
+    date = forms.RegexField(
+        regex=r'^[0-9]{4}-(0[1-9]|1[0-2])$',
+        required=False,
+        error_messages={
+            'invalid': 'Month must be in YYYY-MM format.',
+        },
+    )
+
+    date_from = forms.DateField(required=False)
+    date_to = forms.DateField(required=False)
+
+    profit_min = forms.DecimalField(
+        max_digits=13,
+        decimal_places=2,
+        required=False,
+    )
+
+    profit_max = forms.DecimalField(
+        max_digits=13,
+        decimal_places=2,
+        required=False,
+    )
+
+    def clean_date(self):
+        value = self.cleaned_data.get('date')
+
+        if value and int(value[:4]) == 0:
+            raise ValidationError('Invalid year.')
+
+        return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        start = cleaned_data.get('date_from')
+        end = cleaned_data.get('date_to')
+        minimum = cleaned_data.get('profit_min')
+        maximum = cleaned_data.get('profit_max')
+
+        if start and end and start > end:
+            self.add_error(
+                'date_to',
+                'End date cannot be earlier than start date.',
+            )
+
+        if (
+            minimum is not None
+            and maximum is not None
+            and minimum > maximum
+        ):
+            self.add_error(
+                'profit_max',
+                'Maximum profit cannot be less than minimum profit.',
+            )
+
+        if start or end:
+            cleaned_data['date'] = ''
+
+        return cleaned_data

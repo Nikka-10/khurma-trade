@@ -1,13 +1,21 @@
+from decimal import Decimal
+
 from django.db.utils import DatabaseError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from .models import TradeBook, Tag, Exchange
-from .forms import TradeForm, CreateTagForm, ExchangeForm, ExchangeLineFormSet
 from . import services
 from items import services as item_services
 from subscriptions.decorators import need_base_access, need_advanced_access
 import logging
+from .forms import (
+    TradeForm,
+    CreateTagForm,
+    ExchangeForm,
+    ExchangeLineFormSet,
+    TradebookFilterForm,
+)
 
 
 login_url = '/login'
@@ -28,14 +36,19 @@ def _listing_flags(request):
     }
 
 
-def _exchange_listing(request, flags):
+def _exchange_listing(request, flags, filters=None):
     if not flags['show_exchanges']:
-        return {'exchanges': [], 'exchange_profit': 0}
+        return {
+            'exchanges': [],
+            'exchange_profit': Decimal('0'),
+        }
+
     exchanges = services.get_exchanges(
         request.user,
         tag_id=request.GET.get('tag'),
-        date=request.GET.get('date'),
+        **(filters or {}),
     )
+
     return {
         'exchanges': exchanges,
         'exchange_profit': services.sum_estimated_profit(exchanges),
@@ -53,50 +66,95 @@ def _exchange_forms(user):
 @login_required(login_url=login_url)
 @need_base_access
 def tradebook_view(request):
-    tag_id = request.GET.get('tag')
-    date = request.GET.get('date')
+    flags = _listing_flags(request)
 
-    deals = services.get_deals(request.user, tag_id=tag_id, date=date)
+    filter_form = TradebookFilterForm(request.GET)
+    filter_error = None
+
+    tag_id = request.GET.get('tag')
+
+    if filter_form.is_valid():
+        filters = filter_form.cleaned_data
+
+        deals = services.get_deals(
+            request.user,
+            tag_id=tag_id,
+            **filters,
+        )
+
+        exchange_ctx = _exchange_listing(
+            request,
+            flags,
+            filters,
+        )
+
+        month = filters.get('date')
+
+    else:
+        filter_error = '; '.join(
+            f'{field.replace("_", " ").capitalize()}: {error}'
+            for field, errors in filter_form.errors.items()
+            for error in errors
+        )
+
+        deals = []
+        exchange_ctx = {
+            'exchanges': [],
+            'exchange_profit': Decimal('0'),
+        }
+        month = None
 
     whole_profit = services.calc_whole_profit(deals)
-    monthly_profit = services.get_monthly_profit(request.user, date)
-    months = services.get_months(request.user)
-    tags = Tag.objects.filter(user=request.user)
 
-    flags = _listing_flags(request)
-    exchange_ctx = _exchange_listing(request, flags)
+    show_monthly_result = (
+        month
+        and not tag_id
+        and filter_form.is_valid()
+        and filters.get('profit_min') is None
+        and filters.get('profit_max') is None
+    )
 
-    is_month_view = bool(date) # some AI stuf for front-end, gonna delete later
-    if request.headers.get('HX-Request'):
-        return render(request, 'tradebook/partials/deals.html', {
-            'deals': deals,
-            "whole_profit": whole_profit,
-            "monthly_profit": monthly_profit,
-            'active_month': date,
-            "is_month_view": is_month_view, # some test stuff for nice front-end, gonna delete later, probably
-            'marketplaces': item_services.get_marketplaces(),
-            **flags,
-            **exchange_ctx,
-        })
+    active_month = month if show_monthly_result else None
 
-    form = TradeForm(user=request.user)
-    exchange_form = ExchangeForm(user=request.user)
-    tag_form = CreateTagForm()
+    monthly_profit = (
+        services.get_monthly_profit(request.user, month)
+        if active_month
+        else Decimal('0')
+    )
 
-    return render(request, 'tradebook/main.html', {
-        "form": form,
-        "deals": deals,
-        'exchange': exchange_form,
-        "tag_form": tag_form,
-        "tags": tags,
-        "months": months,
-        "whole_profit": whole_profit,
-        "is_month_view": is_month_view, # some test stuf for nice front-end, gonna delete later
+    context = {
+        'deals': deals,
+        'whole_profit': whole_profit,
+        'monthly_profit': monthly_profit,
+        'active_month': active_month,
+        'is_month_view': bool(active_month),
+        'filter_error': filter_error,
         'marketplaces': item_services.get_marketplaces(),
         **flags,
         **exchange_ctx,
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(
+            request,
+            'tradebook/partials/deals.html',
+            context,
+        )
+
+    context.update({
+        'form': TradeForm(user=request.user),
+        'exchange': ExchangeForm(user=request.user),
+        'tag_form': CreateTagForm(),
+        'tags': Tag.objects.filter(user=request.user),
+        'months': services.get_months(request.user),
         **_exchange_forms(request.user),
     })
+
+    return render(
+        request,
+        'tradebook/main.html',
+        context,
+    )
 
 
 @login_required(login_url=login_url)

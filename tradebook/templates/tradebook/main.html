@@ -96,14 +96,14 @@
                    data-month-filter=""
                    href="{% url 'tradebook:tradebook' %}?{% if request.GET.tag %}tag={{ request.GET.tag|urlencode }}&amp;{% endif %}mode={{ request.GET.mode|default:'all' }}"
                    hx-get="{% url 'tradebook:tradebook' %}"
-                   hx-vals="js:{...filterParams({date: null})}"
+                   hx-vals="js:{...filterParams({date: null, date_from: null, date_to: null})}"
                    hx-target="#deals" hx-push-url="true">All months <span aria-hidden="true">↗</span></a>
                 {% for m in months %}
                 <a class="month-link {% if request.GET.date == m.month|date:'Y-m' %}active{% endif %}"
                    data-month-filter="{{ m.month|date:'Y-m' }}"
                    href="{% url 'tradebook:tradebook' %}?date={{ m.month|date:'Y-m' }}{% if request.GET.tag %}&amp;tag={{ request.GET.tag|urlencode }}{% endif %}&amp;mode={{ request.GET.mode|default:'all' }}"
                    hx-get="{% url 'tradebook:tradebook' %}"
-                   hx-vals="js:{...filterParams({date: '{{ m.month|date:'Y-m' }}'})}"
+                   hx-vals="js:{...filterParams({date: '{{ m.month|date:'Y-m' }}', date_from: null, date_to: null})}"
                    hx-target="#deals" hx-push-url="true">
                     {{ m.month|date:'F Y' }} <span aria-hidden="true">↗</span>
                 </a>
@@ -118,9 +118,23 @@
             <section class="workspace-panel" id="import" aria-labelledby="workspace-title">
                 <div class="workspace-heading">
                     <div><span class="eyebrow eyebrow-muted">QUICK ACTIONS</span><h2 id="workspace-title">Manage your portfolio</h2><p>Add transactions or import your history.</p></div>
+
+                        <button id="toggleImportBtn"
+                                type="button"
+                                class="secondary-button collapsible-toggle"
+                                aria-expanded="{% if result.file_error %}true{% else %}false{% endif %}"
+                                aria-controls="import-csv-panel">
+                            ↑ Import CSV
+                            <span class="toggle-chevron">⌄</span>
+                        </button>
+
                     <button id="toggleBtn" type="button" class="primary-button" aria-expanded="{% if open_tab %}true{% else %}false{% endif %}" aria-controls="formContainer"><span class="button-plus" aria-hidden="true">+</span> Add transaction</button>
                 </div>
-                <form class="upload-form" method="POST" action="{% url 'tradebook:upload_csv' %}" enctype="multipart/form-data">
+                <form id="import-csv-panel"
+                      class="upload-form {% if not result.file_error %}hidden{% endif %}"
+                      method="POST"
+                      action="{% url 'tradebook:upload_csv' %}"
+                      enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="upload-icon" aria-hidden="true">↑</div>
                     <div class="upload-copy"><strong>Import existing data</strong><span>Upload a CSV file with trades or exchanges</span></div>
@@ -156,10 +170,53 @@
                         {% if deal_error %}<div class="form-error">{{ deal_error }}</div>{% endif %}
                         <form method="POST" action="{% url 'tradebook:create_deal' %}" class="create-form">
                             {% csrf_token %}
-                            {% include 'items/partials/search_bar.html' with search_url='/trade/search_items/' %}
-                            {{ form }}
-                            {{ form.errors }}
-                            <button type="submit" class="primary-button">Save trade <span aria-hidden="true">↗</span></button>
+                            {{ form.non_field_errors }}
+                            {{ form.item }}
+                            {{ form.item.errors }}
+                            <div class="trade-form-layout">
+                                <section class="trade-form-section" aria-labelledby="trade-item-title">
+                                    <div class="trade-section-head"><span class="trade-section-number">01</span><div><h4 id="trade-item-title">Item &amp; quantity</h4><p>Choose the item you traded and how many.</p></div></div>
+                                    <div class="trade-fields trade-fields-item">
+                                        <div class="trade-field trade-field-item">
+                                            <label for="item-search">Item</label>
+                                            {% include 'items/partials/search_bar.html' with search_url='/trade/search_items/' %}
+                                        </div>
+                                        <div class="trade-field">
+                                            {{ form.quantity.label_tag }}
+                                            {{ form.quantity }}
+                                            {{ form.quantity.errors }}
+                                        </div>
+                                    </div>
+                                </section>
+                                <section class="trade-form-section" aria-labelledby="trade-purchase-title">
+                                    <div class="trade-section-head"><span class="trade-section-number">02</span><div><h4 id="trade-purchase-title">Purchase</h4><p>Record what you paid and where.</p></div></div>
+                                    <div class="trade-fields">
+                                        <div class="trade-field">{{ form.purchase_date.label_tag }}{{ form.purchase_date }}{{ form.purchase_date.errors }}</div>
+                                        <div class="trade-field">{{ form.purchase_price.label_tag }}{{ form.purchase_price }}{{ form.purchase_price.errors }}</div>
+                                        <div class="trade-field">{{ form.purchase_marketplace.label_tag }}{{ form.purchase_marketplace }}{{ form.purchase_marketplace.errors }}</div>
+                                        <div class="trade-field">{{ form.purchase_marketplace_custom.label_tag }}{{ form.purchase_marketplace_custom }}{{ form.purchase_marketplace_custom.errors }}</div>
+                                    </div>
+                                </section>
+                                <section class="trade-form-section" aria-labelledby="trade-sale-title">
+                                    <div class="trade-section-head"><span class="trade-section-number">03</span><div><h4 id="trade-sale-title">Sale &amp; status</h4><p>Leave sale fields empty for inventory you haven't sold.</p></div></div>
+                                    <div class="trade-fields">
+                                        <div class="trade-field">{{ form.sell_date.label_tag }}{{ form.sell_date }}{{ form.sell_date.errors }}</div>
+                                        <div class="trade-field">{{ form.sell_price.label_tag }}{{ form.sell_price }}{{ form.sell_price.errors }}</div>
+                                        <div class="trade-field">{{ form.sell_marketplace.label_tag }}{{ form.sell_marketplace }}{{ form.sell_marketplace.errors }}</div>
+                                        <div class="trade-field">{{ form.sell_marketplace_custom.label_tag }}{{ form.sell_marketplace_custom }}{{ form.sell_marketplace_custom.errors }}</div>
+                                        <div class="trade-field">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
+                                        <div class="trade-field">{{ form.hold_till.label_tag }}{{ form.hold_till }}{{ form.hold_till.errors }}</div>
+                                    </div>
+                                </section>
+                                <section class="trade-form-section trade-form-section-last" aria-labelledby="trade-extra-title">
+                                    <div class="trade-section-head"><span class="trade-section-number">04</span><div><h4 id="trade-extra-title">Organization</h4><p>Add tags or a note to find this trade later.</p></div></div>
+                                    <div class="trade-fields">
+                                        <div class="trade-field trade-field-wide">{{ form.tags.label_tag }}{{ form.tags }}{{ form.tags.errors }}</div>
+                                        <div class="trade-field trade-field-wide">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
+                                    </div>
+                                </section>
+                            </div>
+                            <div class="trade-form-footer"><span>Check your details before saving.</span><button type="submit" class="primary-button">Save trade <span aria-hidden="true">↗</span></button></div>
                         </form>
                     </div>
                     <div id="exchange-form-box" class="form-box {% if open_tab != 'exchange' %}hidden{% endif %}">
@@ -182,7 +239,123 @@
                         <label for="mode-all">All activity</label>
                         <span class="thumb"></span>
                     </div>
+
+                    <button id="toggleFiltersBtn"
+                            type="button"
+                            class="secondary-button collapsible-toggle ledger-filter-toggle"
+                            aria-expanded="{% if filter_error %}true{% else %}false{% endif %}"
+                            aria-controls="ledger-filter-panel">
+                        ⚙ Filter &amp; sort
+                        <span class="filter-active-dot" aria-hidden="true"></span>
+                        <span class="toggle-chevron">⌄</span>
+                    </button>
+
                 </div>
+<div id="ledger-filter-panel"
+     class="ledger-filter-panel {% if not filter_error %}hidden{% endif %}">
+
+    <form id="ledger-filter-form"
+          class="ledger-filter-form"
+          method="get"
+          action="{% url 'tradebook:tradebook' %}"
+          hx-get="{% url 'tradebook:tradebook' %}"
+          hx-target="#deals"
+          hx-swap="innerHTML"
+          hx-push-url="true">
+
+        <input type="hidden" name="mode" value="{{ request.GET.mode|default:'all' }}">
+        <input type="hidden" name="tag" value="{{ request.GET.tag|default:'' }}">
+        <input type="hidden" name="date" value="{{ request.GET.date|default:'' }}">
+
+        <div class="ledger-filter-heading">
+            <span class="eyebrow eyebrow-muted">SORT &amp; FILTER</span>
+        </div>
+
+    <div class="ledger-filter-grid">
+
+        <label class="ledger-filter-field ledger-filter-sort">
+            <span>Order by</span>
+            <select name="sort" id="ledger-sort">
+                <option value="newest"
+                    {% if request.GET.sort != 'oldest' and request.GET.sort != 'profit_high' and request.GET.sort != 'profit_low' %}selected{% endif %}>
+                    Date · Newest first
+                </option>
+                <option value="oldest"
+                    {% if request.GET.sort == 'oldest' %}selected{% endif %}>
+                    Date · Oldest first
+                </option>
+                <option value="profit_high"
+                    {% if request.GET.sort == 'profit_high' %}selected{% endif %}>
+                    Profit · Highest first
+                </option>
+                <option value="profit_low"
+                    {% if request.GET.sort == 'profit_low' %}selected{% endif %}>
+                    Profit · Lowest first
+                </option>
+            </select>
+        </label>
+
+        <label class="ledger-filter-field">
+            <span>From date</span>
+            <input
+                type="date"
+                name="date_from"
+                value="{{ request.GET.date_from|default:'' }}">
+        </label>
+
+        <label class="ledger-filter-field">
+            <span>To date</span>
+            <input
+                type="date"
+                name="date_to"
+                value="{{ request.GET.date_to|default:'' }}">
+        </label>
+
+        <label class="ledger-filter-field">
+            <span>Min profit ($)</span>
+            <input
+                type="number"
+                step="0.01"
+                name="profit_min"
+                value="{{ request.GET.profit_min|default:'' }}"
+                placeholder="Any">
+        </label>
+
+        <label class="ledger-filter-field">
+            <span>Max profit ($)</span>
+            <input
+                type="number"
+                step="0.01"
+                name="profit_max"
+                value="{{ request.GET.profit_max|default:'' }}"
+                placeholder="Any">
+        </label>
+
+    </div>
+
+    <div class="ledger-filter-actions">
+        <span class="ledger-filter-tip">
+            Date range overrides the selected month.
+            Negative profits are supported.
+        </span>
+
+        <div class="ledger-filter-buttons">
+            <button type="button"
+                    class="secondary-button"
+                    id="ledger-clear-filters">
+                Clear filters
+            </button>
+
+            <button type="submit" class="primary-button">
+                Apply filters ↗
+            </button>
+        </div>
+    </div>
+
+</form>
+
+</div>
+
                 <div id="deals" class="deals-container">
                     {% include 'tradebook/partials/deals.html' %}
                 </div>
@@ -336,17 +509,182 @@ function selectItem(id, name) {
     if (tradeResults) tradeResults.innerHTML = '';
 }
 function syncMarketplaceGroup(select) {
-    const group = select.closest('.marketplace-group');
-    if (!group) return;
-    const field = group.querySelector('.custom-marketplace-field');
-    const input = field && field.querySelector('input');
-    if (!field || !input) return;
-    field.classList.toggle('hidden', Boolean(select.value));
-    if (select.value) input.value = '';
+    if (!select || !select.form || !select.name.endsWith('marketplace')) return;
+
+    const customInput = select.form.elements.namedItem(select.name + '_custom');
+    if (!(customInput instanceof HTMLInputElement)) return;
+
+    const selectedOption = select.selectedOptions[0];
+    const selectedLabel = (selectedOption?.textContent || '').trim().toLowerCase();
+    const isCustom = Boolean(select.value) && /\bcustom\b/.test(selectedLabel);
+
+    const wrapper = customInput.closest(
+        '.custom-marketplace-field, .custom-marketplace-wrapper, .trade-field, .edit-field, p'
+    );
+
+    if (wrapper) {
+        wrapper.hidden = !isCustom;
+        wrapper.classList.toggle('hidden', !isCustom);
+    }
+    customInput.disabled = !isCustom;
+    customInput.placeholder = 'Enter marketplace name';
 }
+
+function initializeMarketplaceFields(root = document) {
+    const fields = root.matches?.('select[name$="marketplace"]')
+        ? [root]
+        : root.querySelectorAll('select[name$="marketplace"]');
+
+    fields.forEach(select => {
+        const emptyOption = Array.from(select.options).find(option => option.value === '');
+        if (emptyOption) {
+            emptyOption.textContent = select.name.includes('sell_marketplace')
+                ? 'Not selected'
+                : 'Select a marketplace';
+        }
+        syncMarketplaceGroup(select);
+    });
+}
+
+document.addEventListener('change', event => {
+    if (event.target.matches('select[name$="marketplace"]')) {
+        syncMarketplaceGroup(event.target);
+    }
+});
+
+initializeMarketplaceFields();
+document.body.addEventListener('htmx:afterSwap', event => {
+    initializeMarketplaceFields(event.detail.target || document);
+});
 function selectItemFromResult(el) {
     selectItem(el.dataset.itemId, el.dataset.itemName);
 }
+function syncLedgerFilterForm() {
+    const form = document.getElementById('ledger-filter-form');
+    if (!form) return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    const fields = [
+        'mode',
+        'tag',
+        'date',
+        'date_from',
+        'date_to',
+        'profit_min',
+        'profit_max'
+    ];
+
+    fields.forEach(name => {
+        const input = form.elements.namedItem(name);
+
+        if (input) {
+            input.value = params.get(name) || (
+                name === 'mode' ? 'all' : ''
+            );
+        }
+    });
+
+    const sort = form.elements.namedItem('sort');
+
+    if (sort) {
+        const selected = params.get('sort');
+
+        sort.value = [
+            'newest',
+            'oldest',
+            'profit_high',
+            'profit_low'
+        ].includes(selected) ? selected : 'newest';
+    }
+}
+
+const ledgerFilterForm = document.getElementById('ledger-filter-form');
+
+if (ledgerFilterForm) {
+    ledgerFilterForm.addEventListener('submit', () => {
+        const params = new URLSearchParams(window.location.search);
+
+        ledgerFilterForm.elements.namedItem('mode').value = currentMode();
+
+        ledgerFilterForm.elements.namedItem('tag').value =
+            params.get('tag') || '';
+
+        const dateFrom = ledgerFilterForm.elements.namedItem('date_from').value;
+        const dateTo = ledgerFilterForm.elements.namedItem('date_to').value;
+
+        ledgerFilterForm.elements.namedItem('date').value =
+            dateFrom || dateTo ? '' : (params.get('date') || '');
+    });
+
+    document.getElementById('ledger-clear-filters')
+        ?.addEventListener('click', () => {
+
+            [
+                'date',
+                'date_from',
+                'date_to',
+                'profit_min',
+                'profit_max'
+            ].forEach(name => {
+                ledgerFilterForm.elements.namedItem(name).value = '';
+            });
+
+            ledgerFilterForm.elements.namedItem('sort').value = 'newest';
+
+            ledgerFilterForm.requestSubmit();
+        });
+}
+
+syncLedgerFilterForm();
+
+window.addEventListener('popstate', syncLedgerFilterForm);
+document.body.addEventListener('htmx:pushedIntoHistory', syncLedgerFilterForm);
+document.body.addEventListener('htmx:afterSettle', syncLedgerFilterForm);
+
+
+function setupCollapsiblePanel(buttonId, panelId) {
+    const button = document.getElementById(buttonId);
+    const panel = document.getElementById(panelId);
+
+    if (!button || !panel) return;
+
+    button.addEventListener('click', () => {
+        const shouldOpen = panel.classList.contains('hidden');
+
+        panel.classList.toggle('hidden', !shouldOpen);
+        button.setAttribute('aria-expanded', String(shouldOpen));
+    });
+}
+
+setupCollapsiblePanel('toggleImportBtn', 'import-csv-panel');
+setupCollapsiblePanel('toggleFiltersBtn', 'ledger-filter-panel');
+
+function syncFilterIndicator() {
+    const button = document.getElementById('toggleFiltersBtn');
+    if (!button) return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    const active = (
+        (params.get('sort') && params.get('sort') !== 'newest') ||
+        Boolean(params.get('date_from')) ||
+        Boolean(params.get('date_to')) ||
+        Boolean(params.get('profit_min')) ||
+        Boolean(params.get('profit_max'))
+    );
+
+    button.classList.toggle('has-active-filters', Boolean(active));
+}
+
+syncFilterIndicator();
+
+window.addEventListener('popstate', syncFilterIndicator);
+
+document.body.addEventListener('htmx:pushedIntoHistory', syncFilterIndicator);
+
+document.body.addEventListener('htmx:afterSettle', syncFilterIndicator);
+
 </script>
 </body>
 </html>

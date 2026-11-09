@@ -9,30 +9,119 @@ from .models import TradeBook, Tag, Exchange, ExchangeItems
 from decimal import Decimal
 from .importers.csv_importer import ImporterForCsv
 from django.db.models import Prefetch
+from django.db.models.functions import Coalesce
 
 
 logger = logging.getLogger(__name__)
 
 
-def get_deals(user, tag_id=None, date=None) -> QuerySet:
-    deals_qs = (TradeBook.objects
-                .filter(user=user)
-                .select_related('purchase_marketplace', 'sell_marketplace', 'item')
-                .prefetch_related('tags')
-                .order_by('-id'))
+def get_deals(
+    user,
+    tag_id=None,
+    date=None,
+    date_from=None,
+    date_to=None,
+    profit_min=None,
+    profit_max=None,
+    sort='newest',
+):
+    qs = (TradeBook.objects.filter(user=user).select_related(
+            'purchase_marketplace',
+            'sell_marketplace',
+            'item',
+        )
+        .prefetch_related('tags')
+    )
+
     if tag_id:
         tag = get_object_or_404(Tag, id=tag_id, user=user)
-        deals_qs = deals_qs.filter(tags=tag)
+        qs = qs.filter(tags=tag)
 
     if date:
-        try:
-            year, month = map(int, date.split('-'))
-            if year < 1 or not 1 <= month <= 12:
-                raise ValueError
-        except (ValueError, AttributeError):
-            raise ValidationError("Invalid month filter.")
+        year, month = map(int, date.split('-'))
 
-    return deals_qs
+        qs = qs.filter(
+            Q(purchase_date__year=year, purchase_date__month=month,)
+            |
+            Q(sell_date__year=year, sell_date__month=month,)
+        )
+
+    elif date_from or date_to:
+        purchase_period = Q()
+        sell_period = Q()
+
+        if date_from:
+            purchase_period &= Q(purchase_date__gte=date_from)
+            sell_period &= Q(sell_date__gte=date_from)
+
+        if date_to:
+            purchase_period &= Q(purchase_date__lte=date_to)
+            sell_period &= Q(sell_date__lte=date_to)
+
+        qs = qs.filter(purchase_period | sell_period)
+
+    qs = qs.annotate(
+        activity_date=Coalesce('sell_date', 'purchase_date')
+    )
+
+    if sort == 'oldest':
+        qs = qs.order_by('activity_date', 'id')
+    else:
+        qs = qs.order_by('-activity_date', '-id')
+
+    needs_python_profit = (
+        profit_min is not None
+        or profit_max is not None
+        or sort in ('profit_high', 'profit_low')
+    )
+
+    if not needs_python_profit:
+        return qs
+
+    deals = list(qs)
+
+    profits = {
+        deal.pk: (
+            deal.profit if deal.sell_price is not None else None
+        )
+        for deal in deals
+    }
+
+    if profit_min is not None or profit_max is not None:
+        deals = [
+            deal for deal in deals
+            if (
+                profits[deal.pk] is not None
+                and (
+                    profit_min is None
+                    or profits[deal.pk] >= profit_min
+                )
+                and (
+                    profit_max is None
+                    or profits[deal.pk] <= profit_max
+                )
+            )
+        ]
+
+    if sort == 'profit_high':
+        deals.sort(
+            key=lambda deal: (
+                profits[deal.pk] is None,
+                -(profits[deal.pk] or Decimal('0')),
+                -deal.pk,
+            )
+        )
+
+    elif sort == 'profit_low':
+        deals.sort(
+            key=lambda deal: (
+                profits[deal.pk] is None,
+                profits[deal.pk] or Decimal('0'),
+                -deal.pk,
+            )
+        )
+
+    return deals
 
 @transaction.atomic
 def create_deal(user, form):
@@ -136,11 +225,17 @@ def get_monthly_profit(user, date) -> Decimal:
     return round(get_money - spend_money, 2)
 
 
-def get_exchanges(user, date=None, tag_id=None):
-    qs = (
-        Exchange.objects
-        .filter(user=user)
-        .select_related('marketplace')
+def get_exchanges(
+    user,
+    date=None,
+    tag_id=None,
+    date_from=None,
+    date_to=None,
+    profit_min=None,
+    profit_max=None,
+    sort='newest',
+):
+    qs = (Exchange.objects.filter(user=user).select_related('marketplace')
         .prefetch_related(
             'tags',
             Prefetch(
@@ -158,18 +253,49 @@ def get_exchanges(user, date=None, tag_id=None):
                 to_attr='received_lines',
             ),
         )
-        .order_by('-id', '-exchange_date')
     )
 
     if tag_id:
-        tag = get_object_or_404(Tag, id=tag_id, user=user,)
+        tag = get_object_or_404(Tag, id=tag_id, user=user)
         qs = qs.filter(tags=tag)
 
     if date:
         year, month = map(int, date.split('-'))
-        qs = qs.filter(exchange_date__year=year, exchange_date__month=month,)
 
-    return qs
+        qs = qs.filter(
+            exchange_date__year=year,
+            exchange_date__month=month,
+        )
+
+    elif date_from or date_to:
+        if date_from:
+            qs = qs.filter(exchange_date__gte=date_from)
+
+        if date_to:
+            qs = qs.filter(exchange_date__lte=date_to)
+
+    if profit_min is not None:
+        qs = qs.filter(estimated_profit__gte=profit_min)
+
+    if profit_max is not None:
+        qs = qs.filter(estimated_profit__lte=profit_max)
+
+    if sort == 'oldest':
+        return qs.order_by('exchange_date', 'id')
+
+    if sort == 'profit_high':
+        return qs.order_by(
+            F('estimated_profit').desc(nulls_last=True),
+            '-id',
+        )
+
+    if sort == 'profit_low':
+        return qs.order_by(
+            F('estimated_profit').asc(nulls_last=True),
+            '-id',
+        )
+
+    return qs.order_by('-exchange_date', '-id')
 
 def sum_estimated_profit(qs) -> Decimal:
     return qs.aggregate(total=Sum('estimated_profit'))['total'] or Decimal('0')

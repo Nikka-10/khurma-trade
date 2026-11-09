@@ -117,7 +117,7 @@
                                     <div class="marketplace-group">
                                         <label class="edit-field">Marketplace
                                             <select name="edit_ex-marketplace" onchange="syncMarketplaceGroup(this)">
-                                                <option value="" {% if not ex.marketplace_id %}selected{% endif %}>Custom / none</option>
+                                                <option value="" {% if not ex.marketplace_id %}selected{% endif %}>Select a marketplace</option>
                                                 {% for marketplace in marketplaces %}
                                                     <option value="{{ marketplace.id }}" {% if marketplace.id == ex.marketplace_id %}selected{% endif %}>{{ marketplace.name }}</option>
                                                 {% endfor %}
