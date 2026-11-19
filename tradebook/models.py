@@ -148,11 +148,11 @@ class Exchange(models.Model):
 
     @property
     def given_items(self):
-        return [ i for i in self.lines.all() if i.side == 'given']
+        return [ i for i in self.lines.all() if i.side == ExchangeItems.Side.given]
 
     @property
     def received_items(self):
-        return [ i for i in self.lines.all() if i.side == 'received']
+        return [ i for i in self.lines.all() if i.side == ExchangeItems.Side.received]
 
 
 

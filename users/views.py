@@ -1,5 +1,6 @@
 from django.contrib.auth import login, logout
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 from .forms import UserSignUpForm, UserLoginForm
 from django.contrib.auth.decorators import login_required
 from . import services
@@ -55,15 +56,15 @@ def verify_otp(request):
 
 
 @login_required(login_url=login_url)
+@require_POST
 def toggle_2fa(request):
-    if request.method == 'POST':
-        was_disabled = services.toggle_2fa(request.user)
+    was_disabled = services.toggle_2fa(request.user)
 
-        if was_disabled :       # already changed on false in services
-            return redirect('tradebook:tradebook')
-        else:                   # already sent verification code
-            request.session['enable_2fa'] = True
-            return redirect('users:verify_2fa_setup')
+    if was_disabled :       # already changed on false in services
+        return redirect('tradebook:tradebook')
+    else:                   # already sent verification code
+        request.session['enable_2fa'] = True
+        return redirect('users:verify_2fa_setup')
 
 
 @login_required(login_url=login_url)
@@ -88,10 +89,9 @@ def verify_2fa_setup(request):
     })
 
 
+@require_POST
 def reset_password(request):
-    if request.method == 'POST':
-
-        return redirect('users:login')
+    return redirect('users:login')
 
 @login_required(login_url=login_url)
 def log_out(request):

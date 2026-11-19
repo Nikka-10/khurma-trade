@@ -1,13 +1,26 @@
+from decimal import Decimal
+
+from django.db.utils import DatabaseError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import TradeBook, Tag
-from .forms import TradeForm, CreateTagForm, ExchangeForm, ExchangeLineFormSet
+from django.views.decorators.http import require_POST
+from .models import TradeBook, Tag, Exchange
 from . import services
 from items import services as item_services
 from subscriptions.decorators import need_base_access, need_advanced_access
+import logging
+from .forms import (
+    TradeForm,
+    CreateTagForm,
+    ExchangeForm,
+    ExchangeLineFormSet,
+    TradebookFilterForm,
+)
 
 
 login_url = '/login'
+
+logger = logging.getLogger(__name__)
 
 MODES = {'trade', 'exchange', 'all'}
 
@@ -23,14 +36,19 @@ def _listing_flags(request):
     }
 
 
-def _exchange_listing(request, flags):
+def _exchange_listing(request, flags, filters=None):
     if not flags['show_exchanges']:
-        return {'exchanges': [], 'exchange_profit': 0}
+        return {
+            'exchanges': [],
+            'exchange_profit': Decimal('0'),
+        }
+
     exchanges = services.get_exchanges(
         request.user,
         tag_id=request.GET.get('tag'),
-        date=request.GET.get('date'),
+        **(filters or {}),
     )
+
     return {
         'exchanges': exchanges,
         'exchange_profit': services.sum_estimated_profit(exchanges),
@@ -48,50 +66,95 @@ def _exchange_forms(user):
 @login_required(login_url=login_url)
 @need_base_access
 def tradebook_view(request):
-    tag_id = request.GET.get('tag')
-    date = request.GET.get('date')
+    flags = _listing_flags(request)
 
-    deals = services.get_deals(request.user, tag_id=tag_id, date=date)
+    filter_form = TradebookFilterForm(request.GET)
+    filter_error = None
+
+    tag_id = request.GET.get('tag')
+
+    if filter_form.is_valid():
+        filters = filter_form.cleaned_data
+
+        deals = services.get_deals(
+            request.user,
+            tag_id=tag_id,
+            **filters,
+        )
+
+        exchange_ctx = _exchange_listing(
+            request,
+            flags,
+            filters,
+        )
+
+        month = filters.get('date')
+
+    else:
+        filter_error = '; '.join(
+            f'{field.replace("_", " ").capitalize()}: {error}'
+            for field, errors in filter_form.errors.items()
+            for error in errors
+        )
+
+        deals = []
+        exchange_ctx = {
+            'exchanges': [],
+            'exchange_profit': Decimal('0'),
+        }
+        month = None
 
     whole_profit = services.calc_whole_profit(deals)
-    monthly_profit = services.get_monthly_profit(request.user, date)
-    months = services.get_months(request.user)
-    tags = Tag.objects.filter(user=request.user)
 
-    flags = _listing_flags(request)
-    exchange_ctx = _exchange_listing(request, flags)
+    show_monthly_result = (
+        month
+        and not tag_id
+        and filter_form.is_valid()
+        and filters.get('profit_min') is None
+        and filters.get('profit_max') is None
+    )
 
-    is_month_view = bool(date) # some AI stuf for front-end, gonna delete later
-    if request.headers.get('HX-Request'):
-        return render(request, 'tradebook/partials/deals.html', {
-            'deals': deals,
-            "whole_profit": whole_profit,
-            "monthly_profit": monthly_profit,
-            'active_month': date,
-            "is_month_view": is_month_view, # some test stuff for nice front-end, gonna delete later, probably
-            'marketplaces': item_services.get_marketplaces(),
-            **flags,
-            **exchange_ctx,
-        })
+    active_month = month if show_monthly_result else None
 
-    form = TradeForm(user=request.user)
-    exchange_form = ExchangeForm(user=request.user)
-    tag_form = CreateTagForm()
+    monthly_profit = (
+        services.get_monthly_profit(request.user, month)
+        if active_month
+        else Decimal('0')
+    )
 
-    return render(request, 'tradebook/main.html', {
-        "form": form,
-        "deals": deals,
-        'exchange': exchange_form,
-        "tag_form": tag_form,
-        "tags": tags,
-        "months": months,
-        "whole_profit": whole_profit,
-        "is_month_view": is_month_view, # some test stuf for nice front-end, gonna delete later
+    context = {
+        'deals': deals,
+        'whole_profit': whole_profit,
+        'monthly_profit': monthly_profit,
+        'active_month': active_month,
+        'is_month_view': bool(active_month),
+        'filter_error': filter_error,
         'marketplaces': item_services.get_marketplaces(),
         **flags,
         **exchange_ctx,
+    }
+
+    if request.headers.get('HX-Request'):
+        return render(
+            request,
+            'tradebook/partials/deals.html',
+            context,
+        )
+
+    context.update({
+        'form': TradeForm(user=request.user),
+        'exchange': ExchangeForm(user=request.user),
+        'tag_form': CreateTagForm(),
+        'tags': Tag.objects.filter(user=request.user),
+        'months': services.get_months(request.user),
         **_exchange_forms(request.user),
     })
+
+    return render(
+        request,
+        'tradebook/main.html',
+        context,
+    )
 
 
 @login_required(login_url=login_url)
@@ -120,14 +183,20 @@ def render_main(request, extra_context=None):
 
 @login_required(login_url=login_url)
 @need_base_access
+@require_POST
 def create_deal(request):
-    if request.method == 'POST':
+    try:
         form = TradeForm(request.POST, user=request.user)
         if form.is_valid():
             services.create_deal(request.user, form)
             return redirect('tradebook:tradebook')
-        else:
-            return render_main(request, extra_context={'form': form})
+    except DatabaseError:
+        logger.exception(
+            "Failed to create deal for user_id=%s",
+            request.user.pk,
+        )
+        return redirect('tradebook:tradebook')
+    return render_main(request, {'form': form})
 
 
 @login_required(login_url=login_url)
@@ -148,51 +217,84 @@ def delete_deal(request):
 
 @login_required(login_url=login_url)
 @need_base_access
+@require_POST
 def edit_deal(request, deal_id):
     deal = get_object_or_404(TradeBook, id=deal_id, user=request.user)
-    if request.method == 'POST':
+    try:
         form = TradeForm(request.POST, instance=deal, user=request.user)
-        if form.is_valid():
-            services.edit_deal(form)
-            return redirect('tradebook:tradebook')
-        print("problem with validation")
-        print(form.errors)
-        return render_main(request, {'form': form})
-
-
-@login_required(login_url=login_url)
-@need_base_access
-def create_tag(request):
-    if request.method == 'POST':
-        tag_form = CreateTagForm(request.POST, user=request.user)
-        if tag_form.is_valid():
-            services.create_tag(request.user, tag_form)
-            return redirect('tradebook:tradebook')
-        else:
-            return render_main(request, {'tag_form': tag_form})
-
-
-@login_required(login_url=login_url)
-@need_base_access
-def delete_tag(request):
-    if request.method == 'POST':
-        services.delete_tag(request.user, request.POST.get('tag'))
+        if not form.is_valid():
+            return render_main(request, {
+                'edit_form': form,
+                'editing_deal': deal,
+            })
+        services.edit_deal(form)
+    except DatabaseError:
+        logger.exception("Failed to edit deal for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
-    else:
-       return render_main(request)
+    return redirect('tradebook:tradebook')
 
 
 @login_required(login_url=login_url)
 @need_base_access
-def upload_csv(request):
-    if request.method == 'POST':
-        csv_file = request.FILES.get('csv_file')
-        if not csv_file:
-            return redirect('tradebook:tradebook')
-        result = services.import_csv(request.user, csv_file)
+@require_POST
+def create_tag(request):
+    try:
+        tag_form = CreateTagForm(request.POST, user=request.user,)
 
-        return render_main(request, extra_context={'result':result})
+        if tag_form.is_valid():
+            tag = services.create_tag(request.user, tag_form,)
+            return redirect('tradebook:tradebook')
+
+    except DatabaseError:
+        logger.exception("Failed to create tag for user_id=%s",request.user.pk,)
+        return redirect('tradebook:tradebook')
+
+    return render_main(request, {'tag_form': tag_form})
+
+
+@login_required(login_url=login_url)
+@need_base_access
+@require_POST
+def delete_tag(request):
+    services.delete_tag(request.user, request.POST.get('tag'))
     return redirect('tradebook:tradebook')
+
+
+@login_required(login_url=login_url)
+@need_base_access
+@require_POST
+def upload_csv(request):
+    csv_file = request.FILES.get('csv_file')
+
+    if not csv_file:
+        return render_main(request, {
+            'result': {
+                'file_error': 'Please choose a CSV file.'
+            },
+        })
+
+    try:
+        result = services.import_csv(
+            request.user,
+            csv_file,
+        )
+
+    except DatabaseError:
+        logger.exception(
+            'CSV import failed for user_id=%s',
+            request.user.pk,
+        )
+
+        result = {
+            'file_error': (
+                'A database error occurred. '
+                'No records from this upload were saved.'
+            ),
+        }
+
+    return render_main(request, {
+        'result': result,
+    })
 
 
 @login_required(login_url=login_url)
@@ -208,9 +310,11 @@ def search_items(request):
 
 
 @login_required(login_url=login_url)
+@need_base_access
+@require_POST
 def create_exchange(request):
-    if request.method == 'POST':
-        form = ExchangeForm(request.POST, user=request.user, prefix='ex')
+    form = ExchangeForm(request.POST, user=request.user, prefix='ex')
+    try:
         given = ExchangeLineFormSet(request.POST, prefix='given')
         received = ExchangeLineFormSet(request.POST, prefix='received')
 
@@ -218,16 +322,43 @@ def create_exchange(request):
         if all(results):
             services.create_exchange(request.user, form, given, received)
             return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception("Failed to create exchange for user_id=%s",request.user.pk,)
+        return redirect('tradebook:tradebook')
 
-        return render_main(request, {
-            'form': form,
-            'given': given,
-            'received': received,
-            'open_tab': 'exchange',
-        })
+    return render_main(request, {
+        'form': form,
+        'given': given,
+        'received': received,
+        'open_tab': 'exchange',
+    })
+
 
 @login_required(login_url=login_url)
+@need_base_access
+@require_POST
 def delete_exchange(request):
-    if request.method == 'POST':
-        services.delete_exchanges(request.user, request.POST.getlist('exchange_id'))
+    services.delete_exchanges(request.user, request.POST.getlist('exchange_id'))
+    return redirect('tradebook:tradebook')
+
+
+@login_required(login_url=login_url)
+@require_POST
+@need_base_access
+def edit_exchange(request):
+    user = request.user
+    exchange_id = request.POST.get('exchange_id')
+    exchange = get_object_or_404(Exchange, pk=exchange_id, user=user,)
+    try:
+        form = ExchangeForm(request.POST, user=user, instance=exchange, prefix='edit_ex')
+
+        if form.is_valid():
+            edited = services.edit_exchange(form)
+            return redirect('tradebook:tradebook')
+    except DatabaseError:
+        logger.exception("Failed to edit exchange for user_id=%s",request.user.pk,)
         return redirect('tradebook:tradebook')
+    return render_main(request, {
+        'exchange_form': form,
+        'open_tab': 'exchange',
+    })

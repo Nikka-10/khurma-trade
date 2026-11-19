@@ -1,11 +1,5 @@
 {% for item in items %}
-<div
-    style="padding: 6px 10px; cursor: pointer;"
-    onclick="selectItem({{ item.id }}, '{{ item.name_on_market }}')">
-    {{ item.name_on_market }}
-</div>
+<div class="search-result-item" role="button" tabindex="0" data-item-id="{{ item.id }}" data-item-name="{{ item.name_on_market }}" onclick="selectItemFromResult(this)" onkeydown="if(event.key === 'Enter' || event.key === ' '){event.preventDefault();selectItemFromResult(this)}">{{ item.name_on_market }}</div>
 {% empty %}
-{% if request.GET.q %}
-<div style="padding: 6px 10px; color: gray;">No items found</div>
-{% endif %}
+{% if request.GET.q %}<div class="search-empty">No matching items found.</div>{% endif %}
 {% endfor %}

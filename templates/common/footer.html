@@ -1,0 +1,16 @@
+{% url 'subscriptions:plans' as subscriptions_url %}
+{% url 'tracking:tracking' as tracking_url %}
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <a href="/" class="footer-brand">TRADE<span>BOOK</span><span class="footer-brand-mark">/</span></a>
+        <span class="footer-copy">A clearer view of every trade.</span>
+        <nav class="footer-nav" aria-label="Footer navigation">
+            <a href="/">Home</a>
+            <a href="{% if tracking_url %}{{ tracking_url }}{% else %}/tracking/{% endif %}">Tracking</a>
+            <a href="{% url 'tradebook:tradebook' %}">TradeBook</a>
+            <a href="{% if subscriptions_url %}{{ subscriptions_url }}{% else %}/subscriptions/{% endif %}">Subscriptions</a>
+            <a href="/#contact">Contact</a>
+        </nav>
+        <span class="footer-year">© {% now "Y" %} TradeBook</span>
+    </div>
+</footer>

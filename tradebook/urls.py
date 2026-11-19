@@ -14,4 +14,5 @@ urlpatterns=[
     path('search_items/', views.search_items, name="search_items"),
     path('exchange/create/', views.create_exchange, name='create_exchange'),
     path('exchange/delete/', views.delete_exchange, name='delete_exchange'),
+    path('exchange/edit/', views.edit_exchange, name='edit_exchange'),
 ]
