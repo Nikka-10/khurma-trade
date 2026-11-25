@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+
+from charset_normalizer import version
 from dotenv import load_dotenv
 import os
 
@@ -30,7 +32,11 @@ SECRET_KEY = 'django-insecure-y+p-!3%9-p9(veoko+z_f@n78s86=k&ae)j4!+dfw01($fpo$$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "host.docker.internal",
+]
 
 # Application definition
 AUTH_USER_MODEL = 'users.User'
@@ -63,6 +69,8 @@ INSTALLED_APPS = [
     #'allauth.socialaccount.providers.steam',
 
     'djstripe',
+
+    'audit',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -85,16 +93,19 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# SOCIALACCOUNT_PROVIDERS = {
-#     'google': {
-#         'app':{
-#             'client_id':os.getenv('GOOGLE_AUTH_CLIENT_ID'),
-#             'secret':os.getenv('GOOGLE_AUTH_CLIENT_SECRET'),
-#         },
-#         'SCOPE': ['profile', 'email'],
-#         'AUTH_PARAMS': {'access_type': 'online'},
-#     }
-# }
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_AUTH_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_AUTH_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+    },
+}
 
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
@@ -172,43 +183,85 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 
-# config/settings.py
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+
     'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} {name}: {message}',
+        'verbose':{
+            'format':'{asctime} [{levelname}] {name}: {message}',
             'style': '{',
         },
     },
+
     'handlers': {
         'console': {
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'subscriptions_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'subscriptions.log',
+
+        'app_file': {
+            'level': 'INFO',
+            'filename': LOG_DIR / 'app.log',
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 3,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'encoding': 'utf-8',
             'formatter': 'verbose',
         },
-    },
-    'loggers': {
-        'subscriptions': {
-            'handlers': ['console', 'subscriptions_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-        },
-    },
-}
 
+        'errors_file': {
+            'level': 'ERROR',
+            'filename': LOG_DIR / 'errors.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+
+        'subscriptions_file': {
+            'level': 'INFO',
+            'filename': LOG_DIR / 'subscriptions.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        },
+
+        'celery_file': {
+            'level': 'INFO',
+            'filename': LOG_DIR / 'celery.log',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+        }
+    },
+    'root': {
+        'handlers': ['console', 'app_file', 'errors_file'],
+        'level': 'INFO',
+    },
+
+    'loggers': {
+        'celery': {
+            'handlers': ['celery_file'],
+            'level': 'INFO',
+        },
+        'subscriptions': {
+            'handlers': ['subscriptions_file'],
+            'level': 'INFO',
+            'propagate': True,
+        }
+    }
+
+}
 
 from celery.schedules import crontab
 
