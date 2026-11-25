@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d0f10">
+    <title>{% block title %}Account{% endblock %} — TradeBook</title>
+    <link rel="stylesheet" href="{% static 'users/style.css' %}">
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <aside class="auth-story" aria-label="TradeBook introduction">
+            <div class="auth-story-top">
+                <a class="brand" href="/" aria-label="TradeBook home">
+                    <span class="brand-mark" aria-hidden="true">T<span>/</span></span>
+                    <span class="brand-name">TRADEBOOK</span>
+                </a>
+                <span class="story-label">THE TRADING WORKSPACE</span>
+            </div>
+
+            <div class="story-main">
+                <span class="eyebrow"><span class="eyebrow-line"></span> THE BIGGER PICTURE</span>
+                <h2>Every trade.<br><em>In perspective.</em></h2>
+                <p>One organized home for your trades, exchanges, and the decisions behind them.</p>
+                <div class="story-features" aria-label="Workspace features">
+                    <div class="story-feature"><span class="feature-number">01</span><span>Keep your transactions organized</span></div>
+                    <div class="story-feature"><span class="feature-number">02</span><span>Review profit and activity</span></div>
+                    <div class="story-feature"><span class="feature-number">03</span><span>Follow the items you care about</span></div>
+                </div>
+            </div>
+
+            <div class="story-decoration" aria-hidden="true">
+                <div class="decoration-circle circle-outer"></div>
+                <div class="decoration-circle circle-inner"></div>
+                <div class="decoration-letter">T<span>/</span></div>
+            </div>
+            <div class="story-bottom"><span>CLARITY IN EVERY DECISION.</span><span>EST. 2026</span></div>
+        </aside>
+
+        <main class="auth-content" id="main-content">
+            <div class="auth-topline">
+                <span class="auth-topline-label">TRADEBOOK <span>/</span> ACCOUNT</span>
+                <a class="top-home-link" href="/">Back to home <span aria-hidden="true">↗</span></a>
+            </div>
+
+            <div class="auth-card">
+                <div class="auth-heading">
+                    <span class="eyebrow form-eyebrow">{% block eyebrow %}YOUR ACCOUNT{% endblock %}</span>
+                    <h1>{% block heading %}Welcome back{% endblock %}</h1>
+                    <p>{% block description %}{% endblock %}</p>
+                </div>
+
+                {% if messages %}
+                    <div class="auth-messages" aria-live="polite">
+                        {% for message in messages %}
+                            <div class="auth-notice {% if message.tags %}notice-{{ message.tags }}{% endif %}" role="status">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+
+                <div class="auth-card-footer">
+                    {% block footer %}{% endblock %}
+                </div>
+            </div>
+            <p class="auth-page-foot">A clearer view of your trading activity.</p>
+        </main>
+    </div>
+</body>
+</html>

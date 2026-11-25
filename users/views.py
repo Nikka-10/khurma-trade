@@ -4,11 +4,17 @@ from django.views.decorators.http import require_POST
 from .forms import UserSignUpForm, UserLoginForm
 from django.contrib.auth.decorators import login_required
 from . import services
+import logging
+from audit.services import record_activity
+
+
+logger = logging.getLogger(__name__)
+
 
 login_url = '/login'
 
 
-def signup_page(request):
+def sign_up(request):
     if request.method == 'POST':
         form = UserSignUpForm(request.POST)
         if form.is_valid():
@@ -20,7 +26,7 @@ def signup_page(request):
     return render(request, "users/signup.html", {'form':form})
 
 
-def login_page(request):
+def log_in(request):
     if request.method == 'POST':
         form = UserLoginForm(request, data=request.POST)
         if form.is_valid():

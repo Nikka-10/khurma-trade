@@ -5,8 +5,8 @@ from . import views
 app_name = "users"
 
 urlpatterns = [
-    path("signup/", views.signup_page, name="signup"),
-    path("login/", views.login_page, name="login"),
+    path("signup/", views.sign_up, name="signup"),
+    path("login/", views.log_in, name="login"),
     path("logout/", views.log_out, name="logout"),
     path('verify/', views.verify_otp, name='verify_otp'),
     path('2fa/toggle/', views.toggle_2fa, name='toggle_2fa'),

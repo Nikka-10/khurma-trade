@@ -32,7 +32,11 @@ SECRET_KEY = 'django-insecure-y+p-!3%9-p9(veoko+z_f@n78s86=k&ae)j4!+dfw01($fpo$$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "host.docker.internal",
+]
 
 # Application definition
 AUTH_USER_MODEL = 'users.User'
@@ -89,16 +93,19 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# SOCIALACCOUNT_PROVIDERS = {
-#     'google': {
-#         'app':{
-#             'client_id':os.getenv('GOOGLE_AUTH_CLIENT_ID'),
-#             'secret':os.getenv('GOOGLE_AUTH_CLIENT_SECRET'),
-#         },
-#         'SCOPE': ['profile', 'email'],
-#         'AUTH_PARAMS': {'access_type': 'online'},
-#     }
-# }
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_AUTH_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_AUTH_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+    },
+}
 
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
